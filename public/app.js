@@ -13,7 +13,7 @@ async function renderAdmin(){
  document.body.innerHTML='<div class="shell"></div>';
  renderWelcomeDashboard();
  const shell=document.querySelector('.shell');shell.classList.add('main');
- const account=shell.querySelector('.reference-account');account.textContent='Déconnexion';account.onclick=logout;
+ const account=shell.querySelector('.reference-account');account.textContent='Déconnexion';account.removeAttribute('onclick');account.onclick=logout;
  const search=shell.querySelector('.reference-search');search.id='search';search.oninput=e=>loadRows(e.target.value);
  const panels=shell.querySelectorAll('.reference-panels>.reference-box');
  panels[0].querySelector('.reference-empty').innerHTML=`<strong>Compte Nitrado</strong><p id="nitrado">Chargement…</p><button class="reference-red" onclick="location.href='/auth/nitrado/start'">Connecter Nitrado</button>`;
