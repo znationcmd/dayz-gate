@@ -26,7 +26,7 @@ function buildDashboard() {
     }
   }));
 
-  app.use(express.static(path.join(__dirname, "..", "public")));
+  app.use(express.static(path.join(__dirname, "public")));
 
   const mustBeLoggedIn = (req, res, next) => {
     if (req.session?.admin) return next();
