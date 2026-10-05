@@ -38,7 +38,7 @@ function buildDashboard() {
 
   app.post("/api/login", (req, res) => {
     const { username, password } = req.body;
-    if (username === process.env.DASHBOARD_USER && password === process.env.DASHBOARD_PASSWORD) {
+    if (process.env.DASHBOARD_USER && process.env.DASHBOARD_PASSWORD && username === process.env.DASHBOARD_USER && password === process.env.DASHBOARD_PASSWORD) {
       req.session.admin = username;
       return res.json({ ok: true });
     }
