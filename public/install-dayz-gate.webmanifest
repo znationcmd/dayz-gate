@@ -1,0 +1,18 @@
+{
+  "id": "/install-dayz-gate-v1",
+  "name": "DayZ Gate",
+  "short_name": "DayZ Gate",
+  "start_url": "/?pwa=dayzgate2026",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "icons": [
+    {
+      "src": "/dayz-gate-apple-180.jpg",
+      "sizes": "180x180",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}
