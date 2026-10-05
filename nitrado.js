@@ -2,9 +2,7 @@ const crypto = require("crypto");
 const path = require("path");
 const db = require("./db");
 const {AsyncLocalStorage}=require('async_hooks');const scopeContext=new AsyncLocalStorage();const currentScope=()=>scopeContext.getStore()||'owner';
-db.exec(`CREATE TABLE IF NOT EXISTS nitrado_scoped(scope_id TEXT PRIMARY KEY,access_token_enc TEXT,refresh_token_enc TEXT,expires_at INTEGER,scope TEXT,updated_at TEXT);
-INSERT OR IGNORE INTO nitrado_scoped SELECT 'owner',access_token_enc,refresh_token_enc,expires_at,scope,updated_at FROM nitrado_connection WHERE id=1;
-DELETE FROM nitrado_connection;`);
+
 const scopedKey=key=>currentScope()==='owner'?key:currentScope()+':'+key;
 
 
@@ -87,12 +85,12 @@ async function postToken(params) {
   return json;
 }
 
-function saveTokenData(token) {
+async function saveTokenData(token) {
   const expiresAt = token.expires_in ? Date.now() + Number(token.expires_in) * 1000 : null;
-  const previous = db.prepare("SELECT refresh_token_enc FROM nitrado_scoped WHERE scope_id=?").get(currentScope());
+  const previous = (await db.prepare("SELECT refresh_token_enc FROM nitrado_scoped WHERE scope_id=?").get(currentScope()));
   const refreshEnc = token.refresh_token ? encrypt(token.refresh_token) : previous?.refresh_token_enc || null;
 
-  db.prepare(`
+  (await db.prepare(`
     INSERT INTO nitrado_scoped(scope_id, access_token_enc, refresh_token_enc, expires_at, scope, updated_at)
     VALUES(?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     ON CONFLICT(scope_id) DO UPDATE SET
@@ -101,7 +99,7 @@ function saveTokenData(token) {
       expires_at=excluded.expires_at,
       scope=excluded.scope,
       updated_at=CURRENT_TIMESTAMP
-  `).run(currentScope(),encrypt(token.access_token), refreshEnc, expiresAt, token.scope || DEFAULT_SCOPE);
+  `).run(currentScope(),encrypt(token.access_token), refreshEnc, expiresAt, token.scope || DEFAULT_SCOPE));
 }
 
 async function exchangeCode(code) {
@@ -110,7 +108,7 @@ async function exchangeCode(code) {
     code,
     redirect_uri: getRedirectUri()
   });
-  saveTokenData(token);
+  await saveTokenData(token);
   return token;
 }
 
@@ -119,12 +117,12 @@ async function refreshAccessToken(refreshToken) {
     grant_type: "refresh_token",
     refresh_token: refreshToken
   });
-  saveTokenData(token);
+  await saveTokenData(token);
   return token.access_token;
 }
 
 async function getAccessToken() {
-  const row = db.prepare("SELECT * FROM nitrado_scoped WHERE scope_id=?").get(currentScope());
+  const row = (await db.prepare("SELECT * FROM nitrado_scoped WHERE scope_id=?").get(currentScope()));
   if (!row?.access_token_enc) throw new Error("Compte Nitrado non connecté");
 
   if (!row.expires_at || row.expires_at > Date.now() + 60_000) {
@@ -167,29 +165,29 @@ async function getServices() {
   return data.services || [];
 }
 
-function setSetting(key, value) {
-  db.prepare(`
+async function setSetting(key, value) {
+  (await db.prepare(`
     INSERT INTO app_settings(key,value) VALUES(?,?)
     ON CONFLICT(key) DO UPDATE SET value=excluded.value
-  `).run(scopedKey(key), value == null ? null : String(value));
+  `).run(scopedKey(key), value == null ? null : String(value)));
 }
 
-function getSetting(key, fallback = "") {
-  return db.prepare("SELECT value FROM app_settings WHERE key=?").get(scopedKey(key))?.value ?? fallback;
+async function getSetting(key, fallback = "") {
+  return (await db.prepare("SELECT value FROM app_settings WHERE key=?").get(scopedKey(key)))?.value ?? fallback;
 }
 
-function getSelectedServer() {
+async function getSelectedServer() {
   return {
-    serviceId: getSetting("nitrado_service_id"),
-    serviceLabel: getSetting("nitrado_service_label"),
-    whitelistFile: getSetting("nitrado_whitelist_file", process.env.NITRADO_WHITELIST_FILE || "dayzstandalone/whitelist.txt")
+    serviceId: await getSetting("nitrado_service_id"),
+    serviceLabel: await getSetting("nitrado_service_label"),
+    whitelistFile: await getSetting("nitrado_whitelist_file", process.env.NITRADO_WHITELIST_FILE || "dayzstandalone/whitelist.txt")
   };
 }
 
-function selectServer(serviceId, serviceLabel, whitelistFile) {
-  setSetting("nitrado_service_id", serviceId);
-  setSetting("nitrado_service_label", serviceLabel || `Service ${serviceId}`);
-  setSetting("nitrado_whitelist_file", whitelistFile || process.env.NITRADO_WHITELIST_FILE || "dayzstandalone/whitelist.txt");
+async function selectServer(serviceId, serviceLabel, whitelistFile) {
+  await setSetting("nitrado_service_id", serviceId);
+  await setSetting("nitrado_service_label", serviceLabel || `Service ${serviceId}`);
+  await setSetting("nitrado_whitelist_file", whitelistFile || process.env.NITRADO_WHITELIST_FILE || "dayzstandalone/whitelist.txt");
 }
 
 async function downloadFile(serviceId, remoteFile) {
@@ -232,7 +230,7 @@ async function writeFile(serviceId, remoteFile, content) {
 }
 
 async function addPcWhitelistEntry(gameUid) {
-  const selected = getSelectedServer();
+  const selected = await getSelectedServer();
   if (!selected.serviceId) throw new Error("Aucun serveur Nitrado sélectionné");
   const uid = String(gameUid || "").trim();
   if (!uid) throw new Error("UID joueur vide");
@@ -252,9 +250,9 @@ async function addPcWhitelistEntry(gameUid) {
   return { changed: true, message: "Ajouté à whitelist.txt — redémarrage du serveur requis pour appliquer la modification" };
 }
 
-function getConnectionStatus() {
-  const row = db.prepare("SELECT expires_at, scope, updated_at FROM nitrado_scoped WHERE scope_id=?").get(currentScope());
-  const selected = getSelectedServer();
+async function getConnectionStatus() {
+  const row = (await db.prepare("SELECT expires_at, scope, updated_at FROM nitrado_scoped WHERE scope_id=?").get(currentScope()));
+  const selected = await getSelectedServer();
   return {
     configured: isConfigured(),
     connected: Boolean(row),
@@ -264,10 +262,10 @@ function getConnectionStatus() {
   };
 }
 
-function disconnect() {
-  db.prepare("DELETE FROM nitrado_scoped WHERE scope_id=?").run(currentScope());
-  setSetting("nitrado_service_id", "");
-  setSetting("nitrado_service_label", "");
+async function disconnect() {
+  (await db.prepare("DELETE FROM nitrado_scoped WHERE scope_id=?").run(currentScope()));
+  await setSetting("nitrado_service_id", "");
+  await setSetting("nitrado_service_label", "");
 }
 
 module.exports = {
@@ -283,3 +281,4 @@ module.exports = {
   getRedirectUri,
   isConfigured
 };
+

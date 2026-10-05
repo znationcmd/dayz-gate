@@ -6,13 +6,14 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 client.once("ready", () => console.log(`Bot connecté : ${client.user.tag} | ${client.guilds.cache.size} serveur(s)`));
 
-client.on("interactionCreate", async interaction => {
+async function handleInteraction(interaction) {
   if (!interaction.isChatInputCommand())return;
   if(interaction.commandName==='dashboard'){
+    await interaction.deferReply({ephemeral:true});
     const base=String(process.env.PUBLIC_BASE_URL||'https://dayz-gate-production.up.railway.app').replace(/\/$/,'');
     const allowed=interaction.guildId&&(interaction.guild?.ownerId===interaction.user.id||interaction.memberPermissions?.has(32n)||interaction.memberPermissions?.has(8n));
     let link=base;
-    if(allowed){const token=crypto.randomBytes(32).toString('base64url');db.prepare('DELETE FROM discord_dashboard_links WHERE expires_at<?').run(Date.now());db.prepare('INSERT INTO discord_dashboard_links VALUES(?,?,?,?,?)').run(crypto.createHash('sha256').update(token).digest('hex'),interaction.guildId,interaction.user.id,interaction.user.username,Date.now()+5*60000);link=base+'/#founder-login='+token}
+    if(allowed){const token=crypto.randomBytes(32).toString('base64url');(await db.prepare('DELETE FROM discord_dashboard_links WHERE expires_at<?').run(Date.now()));(await db.prepare('INSERT INTO discord_dashboard_links VALUES(?,?,?,?,?)').run(crypto.createHash('sha256').update(token).digest('hex'),interaction.guildId,interaction.user.id,interaction.user.username,Date.now()+5*60000));link=base+'/#founder-login='+token}
     const embed={
       color:0xd71935,
       title:'DAYZ GATE — Ton compagnon DayZ',
@@ -28,7 +29,7 @@ client.on("interactionCreate", async interaction => {
       timestamp:new Date().toISOString()
     };
     if(client.user)embed.thumbnail={url:client.user.displayAvatarURL({size:256})};
-    return interaction.reply({ephemeral:true,embeds:[embed],components:[{type:1,components:[{type:2,style:5,label:allowed?'Ouvrir mon Dashboard':'Ouvrir DayZ Gate',url:link},{type:2,style:5,label:'Installer l’application',url:base+'/?help=install'},{type:2,style:5,label:'Site web',url:base}]}]});
+    return interaction.editReply({embeds:[embed],components:[{type:1,components:[{type:2,style:5,label:allowed?'Ouvrir mon Dashboard':'Ouvrir DayZ Gate',url:link},{type:2,style:5,label:'Installer l’application',url:base+'/?help=install'},{type:2,style:5,label:'Site web',url:base}]}]});
   }
   if(interaction.commandName!=='whitelist')return;
   if (!interaction.guildId) return interaction.reply({content:"❌ Cette commande doit être utilisée dans un serveur Discord.",ephemeral:true});
@@ -38,25 +39,37 @@ client.on("interactionCreate", async interaction => {
   const serverName=interaction.options.getString("serveur",true).trim();
   if(platform==="PC" && gameName.length!==44) return interaction.reply({content:"❌ Pour DayZ PC, indique ton UID DayZ de 44 caractères.",ephemeral:true});
 
+  await interaction.deferReply({ephemeral:true});
   // Le Discord d'origine est inclus dans la clé logique afin d'isoler les communautés.
   const scopedServer=`${interaction.guildId}:${serverName}`;
-  const existing=db.prepare(`SELECT id FROM whitelist_requests WHERE discord_user_id=? AND server_name=? AND status IN ('pending','approved')`).get(interaction.user.id,scopedServer);
-  if(existing) return interaction.reply({content:"❌ Tu as déjà une demande en attente ou approuvée pour ce serveur.",ephemeral:true});
+  const existing=(await db.prepare(`SELECT id FROM whitelist_requests WHERE discord_user_id=? AND server_name=? AND status IN ('pending','approved')`).get(interaction.user.id,scopedServer));
+  if(existing) return interaction.editReply({content:"❌ Tu as déjà une demande en attente ou approuvée pour ce serveur.",ephemeral:true});
 
-  db.prepare(`INSERT INTO whitelist_requests (discord_user_id,discord_username,game_name,platform,server_name) VALUES (?,?,?,?,?)`)
-    .run(interaction.user.id,interaction.user.tag,gameName,platform,scopedServer);
+  (await db.prepare(`INSERT INTO whitelist_requests (discord_user_id,discord_username,game_name,platform,server_name) VALUES (?,?,?,?,?)`)
+    .run(interaction.user.id,interaction.user.tag,gameName,platform,scopedServer));
 
-  await interaction.reply({content:`✅ **Demande envoyée !**\n🎮 Plateforme : **${platform}**\n🪪 Identifiant : **${gameName}**\n🖥️ Serveur : **${serverName}**`,ephemeral:true});
+  await interaction.editReply({content:`✅ **Demande envoyée !**\n🎮 Plateforme : **${platform}**\n🪪 Identifiant : **${gameName}**\n🖥️ Serveur : **${serverName}**`,ephemeral:true});
+}
+client.on('interactionCreate', interaction => {
+  handleInteraction(interaction).catch(async err => {
+    console.error('Erreur commande Discord :', err.code || err.name);
+    try {
+      const content = '❌ Opération impossible, réessaie dans un instant.';
+      if (interaction.deferred || interaction.replied) await interaction.editReply({content});
+      else await interaction.reply({content, ephemeral:true});
+    } catch (replyError) { console.error('Réponse Discord impossible :', replyError.code || replyError.name); }
+  });
 });
 
 async function grantWhitelistRole(discordUserId, guildId) {
-  const roleId=db.prepare("SELECT whitelist_role_id FROM guild_settings WHERE guild_id=?").get(guildId)?.whitelist_role_id||process.env.WHITELIST_ROLE_ID;
+  const roleId=(await db.prepare("SELECT whitelist_role_id FROM guild_settings WHERE guild_id=?").get(guildId))?.whitelist_role_id||process.env.WHITELIST_ROLE_ID;
   if(!guildId||!roleId)return;
   const guild=await client.guilds.fetch(guildId); const member=await guild.members.fetch(discordUserId); await member.roles.add(roleId);
 }
 async function removeWhitelistRole(discordUserId, guildId) {
-  const roleId=db.prepare("SELECT whitelist_role_id FROM guild_settings WHERE guild_id=?").get(guildId)?.whitelist_role_id||process.env.WHITELIST_ROLE_ID;
+  const roleId=(await db.prepare("SELECT whitelist_role_id FROM guild_settings WHERE guild_id=?").get(guildId))?.whitelist_role_id||process.env.WHITELIST_ROLE_ID;
   if(!guildId||!roleId)return;
   const guild=await client.guilds.fetch(guildId); const member=await guild.members.fetch(discordUserId); await member.roles.remove(roleId);
 }
 module.exports={client,grantWhitelistRole,removeWhitelistRole};
+

@@ -12,6 +12,7 @@ async function main() {
     process.exit(1);
   }
 
+  await require("./db").init();
   await registerCommands();
   await client.login(process.env.DISCORD_TOKEN);
 
@@ -21,3 +22,4 @@ async function main() {
 }
 
 main().catch(err => { console.error(err); process.exit(1); });
+

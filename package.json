@@ -5,7 +5,8 @@
   "description": "DayZ Gate Discord bot and dashboard",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "node --test test/*.test.js"
   },
   "engines": {
     "node": ">=20"
@@ -16,6 +17,10 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "express-session": "^1.18.1",
-    "helmet": "^8.0.0"
+    "helmet": "^8.0.0",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.3.16"
   }
 }
