@@ -46,7 +46,7 @@ function mountMenu(authenticated=false){
  const toggle=document.createElement('button');toggle.className='gate-toggle';toggle.setAttribute('aria-controls','gate-side');toggle.setAttribute('aria-expanded','false');toggle.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg> Menu';
  const close=()=>{side.classList.remove('open');shade.classList.remove('open');toggle.setAttribute('aria-expanded','false')};
  toggle.onclick=()=>{const open=side.classList.toggle('open');shade.classList.toggle('open',open);toggle.setAttribute('aria-expanded',String(open))};shade.onclick=close;side.querySelector('.gate-close').onclick=close;document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
- side.querySelectorAll('[data-page]').forEach(button=>button.onclick=()=>{side.querySelectorAll('[data-page]').forEach(b=>{b.classList.toggle('selected',b===button);b.removeAttribute('aria-current')});button.setAttribute('aria-current','page');close();openMenuPage(button.dataset.page,button.textContent.trim(),authenticated)});
+ side.querySelectorAll('[data-page]').forEach(button=>button.onclick=()=>{side.querySelectorAll('[data-page]').forEach(b=>{b.classList.toggle('selected',b===button);b.removeAttribute('aria-current')});button.setAttribute('aria-current','page');close();openMenuPage(button.dataset.page,menuItems.find(([,k])=>k===button.dataset.page)?.[0]||button.textContent.trim(),authenticated)});
  document.body.prepend(shade,side,toggle);
  if(window.mountHelp)window.mountHelp();
 }
@@ -66,7 +66,7 @@ const helperScript=document.createElement("script");helperScript.src="/help.js";
 
 function showLogin(label='le Dashboard'){
  const modal=document.getElementById('gate-login');if(!modal)return;
- modal.querySelector('.sub').textContent=`Connecte-toi pour accéder à ${label.toLowerCase()}.`;if(!modal.querySelector('.discord-login-guide')){const guide=document.createElement('p');guide.className='discord-login-guide sub';guide.innerHTML='Fondateur ? Dans ton Discord, utilise <b>/dashboard</b> de DayZ Gate puis <b>Ouvrir mon Dashboard</b> pour te connecter automatiquement.';modal.querySelector('.sub').after(guide)}modal.showModal();document.getElementById('u').focus();
+ modal.querySelector('.sub').textContent='Connecte-toi pour administrer DayZ Gate.';if(!modal.querySelector('.discord-login-guide')){const guide=document.createElement('p');guide.className='discord-login-guide sub';guide.innerHTML='Fondateur ? Dans ton Discord, utilise <b>/dashboard</b> de DayZ Gate puis <b>Ouvrir mon Dashboard</b> pour te connecter automatiquement.';modal.querySelector('.sub').after(guide)}modal.showModal();document.getElementById('u').focus();
 }
 function renderWelcomeDashboard(){
  const shell=document.querySelector('.shell');if(!shell)return;
@@ -82,3 +82,5 @@ function renderWelcomeDashboard(){
  @media(max-width:800px){.shell{padding:76px 14px 24px!important}.reference-top{height:44px}.reference-search{margin-left:0;margin-right:0;width:100%;min-width:0}.reference-account{padding:10px}.reference-hero{height:170px}.reference-flow{grid-template-columns:repeat(2,1fr);gap:9px}.reference-step{min-height:132px}.reference-step:last-child{grid-column:1/-1;min-height:110px}.reference-panels,.reference-bottom{grid-template-columns:1fr}.reference-box{padding:15px}.reference-box h2{font-size:15px}.reference-stats span{font-size:10px}.gate-side{padding-top:52px}.gate-discord{margin-top:auto}.reference-empty{min-height:150px}.reference-table-empty{height:150px}}
  `;document.head.appendChild(style);
 }
+
+const languageScript=document.createElement("script");languageScript.src="/i18n.js";document.head.appendChild(languageScript);
