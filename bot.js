@@ -13,7 +13,22 @@ client.on("interactionCreate", async interaction => {
     const allowed=interaction.guildId&&(interaction.guild?.ownerId===interaction.user.id||interaction.memberPermissions?.has(32n)||interaction.memberPermissions?.has(8n));
     let link=base;
     if(allowed){const token=crypto.randomBytes(32).toString('base64url');db.prepare('DELETE FROM discord_dashboard_links WHERE expires_at<?').run(Date.now());db.prepare('INSERT INTO discord_dashboard_links VALUES(?,?,?,?,?)').run(crypto.createHash('sha256').update(token).digest('hex'),interaction.guildId,interaction.user.id,interaction.user.username,Date.now()+5*60000);link=base+'/#founder-login='+token}
-    return interaction.reply({ephemeral:true,content:allowed?'🛡️ **Ton Dashboard fondateur DayZ Gate**\nCe lien privé te connecte à ton Discord. Il est valable 5 minutes et utilisable une seule fois.':'📲 **Dashboard DayZ Gate**\nInstallation gratuite, guide et aide IA. Pour administrer un Discord, son propriétaire ou un membre avec la permission Gérer le serveur doit utiliser /dashboard.',components:[{type:1,components:[{type:2,style:5,label:allowed?'Ouvrir mon Dashboard':'Ouvrir DayZ Gate',url:link},{type:2,style:5,label:'Installer l’application',url:base+'/?help=install'}]}]});
+    const embed={
+      color:0xd71935,
+      title:'DAYZ GATE — Ton compagnon DayZ',
+      url:base,
+      description:'Gère les demandes de whitelist de ta communauté depuis Discord et le Dashboard, sur **PC, Xbox et PlayStation**.',
+      fields:[
+        {name:'⚙️ Configuration',value:'[Ouvrir le Dashboard]('+base+')\nRôle whitelist Discord et connexion Nitrado par communauté.'},
+        {name:'💎 Accès',value:'Application web et assistant IA gratuits.'},
+        {name:'🧩 Fonctions disponibles',value:'📝 Demandes avec `/whitelist` • ✅ Validation ou refus • 🛡️ Rôle Discord • 📊 Statistiques • 📲 Guide d’installation • ✦ Aide IA'},
+        {name:allowed?'🔐 Ton accès fondateur':'👑 Pour les fondateurs',value:allowed?'Clique sur **Ouvrir mon Dashboard** ci-dessous. Ton lien privé est valable **5 minutes**, à usage unique, et ouvre uniquement ta communauté.':'Le propriétaire du Discord ou un membre ayant **Gérer le serveur** utilise `/dashboard` pour obtenir son accès privé.'}
+      ],
+      footer:{text:'DayZ Gate • PC, téléphone et tablette'},
+      timestamp:new Date().toISOString()
+    };
+    if(client.user)embed.thumbnail={url:client.user.displayAvatarURL({size:256})};
+    return interaction.reply({ephemeral:true,embeds:[embed],components:[{type:1,components:[{type:2,style:5,label:allowed?'Ouvrir mon Dashboard':'Ouvrir DayZ Gate',url:link},{type:2,style:5,label:'Installer l’application',url:base+'/?help=install'},{type:2,style:5,label:'Site web',url:base}]}]});
   }
   if(interaction.commandName!=='whitelist')return;
   if (!interaction.guildId) return interaction.reply({content:"❌ Cette commande doit être utilisée dans un serveur Discord.",ephemeral:true});
