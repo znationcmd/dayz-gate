@@ -48,6 +48,7 @@ function mountMenu(authenticated=false){
  toggle.onclick=()=>{const open=side.classList.toggle('open');shade.classList.toggle('open',open);toggle.setAttribute('aria-expanded',String(open))};shade.onclick=close;side.querySelector('.gate-close').onclick=close;document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
  side.querySelectorAll('[data-page]').forEach(button=>button.onclick=()=>{side.querySelectorAll('[data-page]').forEach(b=>{b.classList.toggle('selected',b===button);b.removeAttribute('aria-current')});button.setAttribute('aria-current','page');close();openMenuPage(button.dataset.page,button.textContent.trim(),authenticated)});
  document.body.prepend(shade,side,toggle);
+ if(window.mountHelp)window.mountHelp();
 }
 function openMenuPage(key,label,authenticated){
  document.querySelector('.gate-menu-notice')?.remove();
@@ -56,15 +57,16 @@ function openMenuPage(key,label,authenticated){
  main.querySelector('.title').textContent=label;
  if(['home','requests','players','shield'].includes(key)){loadRows(document.getElementById('search').value);document.getElementById('rows').closest('section').querySelector('h2').textContent=window.approvedOnly?'Joueurs whitelistés':'Demandes récentes';document.getElementById('rows').closest('section').scrollIntoView({behavior:'smooth'});return}
  if(key==='stats'){document.getElementById('stats').scrollIntoView({behavior:'smooth'});return}
- if(key==='servers'||key==='settings'){document.getElementById('nitrado').closest('section').scrollIntoView({behavior:'smooth'});return}
+ if(key==='servers'||key==='settings'){if(window.openGateHelp){window.openGateHelp('settings');return}document.getElementById('nitrado').closest('section').scrollIntoView({behavior:'smooth'});return}
  const notice=document.createElement('section');notice.className='gate-menu-notice';notice.innerHTML=`<h2>${esc(label)}</h2><p>Cette rubrique n’est pas encore disponible sur DayZ Gate.</p>`;main.querySelector('.title').after(notice);
 }
 renderWelcomeDashboard();
 mountMenu();
+const helperScript=document.createElement("script");helperScript.src="/help.js";document.head.appendChild(helperScript);
 
 function showLogin(label='le Dashboard'){
  const modal=document.getElementById('gate-login');if(!modal)return;
- modal.querySelector('.sub').textContent=`Connecte-toi pour accéder à ${label.toLowerCase()}.`;modal.showModal();document.getElementById('u').focus();
+ modal.querySelector('.sub').textContent=`Connecte-toi pour accéder à ${label.toLowerCase()}.`;if(!modal.querySelector('.discord-login-guide')){const guide=document.createElement('p');guide.className='discord-login-guide sub';guide.innerHTML='Fondateur ? Dans ton Discord, utilise <b>/dashboard</b> de DayZ Gate puis <b>Ouvrir mon Dashboard</b> pour te connecter automatiquement.';modal.querySelector('.sub').after(guide)}modal.showModal();document.getElementById('u').focus();
 }
 function renderWelcomeDashboard(){
  const shell=document.querySelector('.shell');if(!shell)return;

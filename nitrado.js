@@ -1,6 +1,12 @@
 const crypto = require("crypto");
 const path = require("path");
 const db = require("./db");
+const {AsyncLocalStorage}=require('async_hooks');const scopeContext=new AsyncLocalStorage();const currentScope=()=>scopeContext.getStore()||'owner';
+db.exec(`CREATE TABLE IF NOT EXISTS nitrado_scoped(scope_id TEXT PRIMARY KEY,access_token_enc TEXT,refresh_token_enc TEXT,expires_at INTEGER,scope TEXT,updated_at TEXT);
+INSERT OR IGNORE INTO nitrado_scoped SELECT 'owner',access_token_enc,refresh_token_enc,expires_at,scope,updated_at FROM nitrado_connection WHERE id=1;
+DELETE FROM nitrado_connection;`);
+const scopedKey=key=>currentScope()==='owner'?key:currentScope()+':'+key;
+
 
 const AUTH_URL = process.env.NITRADO_AUTH_URL || "https://oauth.nitrado.net/oauth/v2/auth";
 const TOKEN_URL = process.env.NITRADO_TOKEN_URL || "https://oauth.nitrado.net/oauth/v2/token";
@@ -83,19 +89,19 @@ async function postToken(params) {
 
 function saveTokenData(token) {
   const expiresAt = token.expires_in ? Date.now() + Number(token.expires_in) * 1000 : null;
-  const previous = db.prepare("SELECT refresh_token_enc FROM nitrado_connection WHERE id=1").get();
+  const previous = db.prepare("SELECT refresh_token_enc FROM nitrado_scoped WHERE scope_id=?").get(currentScope());
   const refreshEnc = token.refresh_token ? encrypt(token.refresh_token) : previous?.refresh_token_enc || null;
 
   db.prepare(`
-    INSERT INTO nitrado_connection(id, access_token_enc, refresh_token_enc, expires_at, scope, updated_at)
-    VALUES(1, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-    ON CONFLICT(id) DO UPDATE SET
+    INSERT INTO nitrado_scoped(scope_id, access_token_enc, refresh_token_enc, expires_at, scope, updated_at)
+    VALUES(?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(scope_id) DO UPDATE SET
       access_token_enc=excluded.access_token_enc,
       refresh_token_enc=excluded.refresh_token_enc,
       expires_at=excluded.expires_at,
       scope=excluded.scope,
       updated_at=CURRENT_TIMESTAMP
-  `).run(encrypt(token.access_token), refreshEnc, expiresAt, token.scope || DEFAULT_SCOPE);
+  `).run(currentScope(),encrypt(token.access_token), refreshEnc, expiresAt, token.scope || DEFAULT_SCOPE);
 }
 
 async function exchangeCode(code) {
@@ -118,7 +124,7 @@ async function refreshAccessToken(refreshToken) {
 }
 
 async function getAccessToken() {
-  const row = db.prepare("SELECT * FROM nitrado_connection WHERE id=1").get();
+  const row = db.prepare("SELECT * FROM nitrado_scoped WHERE scope_id=?").get(currentScope());
   if (!row?.access_token_enc) throw new Error("Compte Nitrado non connecté");
 
   if (!row.expires_at || row.expires_at > Date.now() + 60_000) {
@@ -165,11 +171,11 @@ function setSetting(key, value) {
   db.prepare(`
     INSERT INTO app_settings(key,value) VALUES(?,?)
     ON CONFLICT(key) DO UPDATE SET value=excluded.value
-  `).run(key, value == null ? null : String(value));
+  `).run(scopedKey(key), value == null ? null : String(value));
 }
 
 function getSetting(key, fallback = "") {
-  return db.prepare("SELECT value FROM app_settings WHERE key=?").get(key)?.value ?? fallback;
+  return db.prepare("SELECT value FROM app_settings WHERE key=?").get(scopedKey(key))?.value ?? fallback;
 }
 
 function getSelectedServer() {
@@ -247,7 +253,7 @@ async function addPcWhitelistEntry(gameUid) {
 }
 
 function getConnectionStatus() {
-  const row = db.prepare("SELECT expires_at, scope, updated_at FROM nitrado_connection WHERE id=1").get();
+  const row = db.prepare("SELECT expires_at, scope, updated_at FROM nitrado_scoped WHERE scope_id=?").get(currentScope());
   const selected = getSelectedServer();
   return {
     configured: isConfigured(),
@@ -259,12 +265,13 @@ function getConnectionStatus() {
 }
 
 function disconnect() {
-  db.prepare("DELETE FROM nitrado_connection WHERE id=1").run();
+  db.prepare("DELETE FROM nitrado_scoped WHERE scope_id=?").run(currentScope());
   setSetting("nitrado_service_id", "");
   setSetting("nitrado_service_label", "");
 }
 
 module.exports = {
+  withScope:(scope,fn)=>scopeContext.run(scope,fn),
   buildAuthorizationUrl,
   exchangeCode,
   getUser,

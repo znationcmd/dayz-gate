@@ -41,6 +41,8 @@ CREATE TABLE IF NOT EXISTS nitrado_connection (
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS discord_dashboard_links(token_hash TEXT PRIMARY KEY,guild_id TEXT NOT NULL,user_id TEXT NOT NULL,username TEXT NOT NULL,expires_at INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS guild_settings(guild_id TEXT PRIMARY KEY,whitelist_role_id TEXT);
 CREATE TABLE IF NOT EXISTS app_settings (
   key TEXT PRIMARY KEY,
   value TEXT

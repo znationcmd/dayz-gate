@@ -6,6 +6,8 @@ const crypto = require("crypto");
 const db = require("./db");
 const { grantWhitelistRole, removeWhitelistRole } = require("./bot");
 const nitrado = require("./nitrado");
+const founders=require("./founders");
+const {client}=require("./bot");
 
 function buildDashboard() {
   const app = express();
@@ -16,13 +18,14 @@ function buildDashboard() {
   app.use(express.urlencoded({ extended: true }));
   app.use(session({
     secret: process.env.SESSION_SECRET || "change-me",
+    store: new founders.Store(),
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
-      maxAge: 1000 * 60 * 60 * 12
+      maxAge: 1000 * 60 * 60 * 24 * 30
     }
   }));
 
@@ -30,21 +33,30 @@ function buildDashboard() {
   app.get("/dayz-gate-apple-180.jpg",(req,res)=>{res.set("Cache-Control","no-store");res.type("jpg").send(appleIcon)});
   app.use(express.static(path.join(__dirname,"public"),{etag:false,maxAge:0,setHeaders:r=>r.set("Cache-Control","no-store")}));
 
-  const mustBeLoggedIn = (req, res, next) => {
-    if (req.session?.admin) return next();
+  const mustBeLoggedIn = async (req, res, next) => {
+    if (req.session?.admin) {
+      if(req.session.authMethod==='discord'&&Date.now()-(req.session.discordVerifiedAt||0)>60000){
+        try{const guild=await client.guilds.fetch(req.session.guildId);const member=await guild.members.fetch(req.session.discordUserId);if(guild.ownerId!==req.session.discordUserId&&!member.permissions.has(32n)&&!member.permissions.has(8n))throw Error('Droits retirés');req.session.discordVerifiedAt=Date.now()}catch{return res.status(403).json({error:'Droits fondateur Discord requis'})}
+      }
+      if(req.session.role==='founder'&&req.session.authMethod!=='discord'&&!db.prepare("SELECT id FROM founder_accounts WHERE id=? AND active=1").get(req.session.accountId))return res.status(401).json({error:"Compte désactivé"});
+      return next();
+    }
     if (req.path.startsWith("/auth/")) return res.redirect("/");
     res.status(401).json({ error: "Non autorisé" });
   };
 
   app.get("/health", (req, res) => res.json({ ok: true, service: "dayz-gate" }));
 
-  app.post("/api/login", (req, res) => {
-    const { username, password } = req.body;
-    if (process.env.DASHBOARD_USER && process.env.DASHBOARD_PASSWORD && username === process.env.DASHBOARD_USER && password === process.env.DASHBOARD_PASSWORD) {
-      req.session.admin = username;
-      return res.json({ ok: true });
-    }
-    res.status(401).json({ error: "Identifiants incorrects" });
+  const loginAttempts=new Map();
+  app.use((req,res,next)=>{if(['POST','DELETE','PUT','PATCH'].includes(req.method)&&req.headers.origin){try{if(new URL(req.headers.origin).host!==req.get('host'))return res.status(403).json({error:'Origine non autorisée'})}catch{return res.status(403).json({error:'Origine non autorisée'})}}next()});
+  app.use((req,res,next)=>nitrado.withScope(req.session.role==='founder'?req.session.guildId:(req.session.selectedGuildId||'owner'),next));
+  founders.mount(app,mustBeLoggedIn,client);
+  app.post('/api/login',(req,res)=>{
+    const key=req.ip;const now=Date.now();const tries=loginAttempts.get(key)||{count:0,time:now};if(now-tries.time>900000){tries.count=0;tries.time=now}if(tries.count>=10)return res.status(429).json({error:'Réessaie dans 15 minutes'});tries.count++;loginAttempts.set(key,tries);
+    const {username,password}=req.body;if(typeof username!=='string'||typeof password!=='string'||password.length>128)return res.status(401).json({error:'Identifiants incorrects'});
+    let account=null;const owner=process.env.DASHBOARD_USER&&process.env.DASHBOARD_PASSWORD&&username===process.env.DASHBOARD_USER&&password===process.env.DASHBOARD_PASSWORD;
+    if(!owner){account=db.prepare('SELECT * FROM founder_accounts WHERE username=? AND active=1').get(username);if(!account||!founders.verifyPassword(password,account.password_hash))return res.status(401).json({error:'Identifiants incorrects'})}
+    req.session.regenerate(err=>{if(err)return res.status(500).json({error:'Connexion impossible'});req.session.admin=username;req.session.role=owner?'owner':'founder';if(account){req.session.guildId=account.guild_id;req.session.accountId=account.id}loginAttempts.delete(key);req.session.save(()=>res.json({ok:true}))});
   });
 
   app.post("/api/logout", (req, res) => {
@@ -52,7 +64,8 @@ function buildDashboard() {
   });
 
   app.get("/api/me", (req, res) => {
-    res.json({ loggedIn: Boolean(req.session?.admin) });
+    const active=req.session.role!=="founder"||req.session.authMethod==="discord"||Boolean(db.prepare("SELECT id FROM founder_accounts WHERE id=? AND active=1").get(req.session.accountId));
+    res.json({ loggedIn: Boolean(req.session?.admin)&&active,role:req.session.role||"owner",guildId:req.session.guildId||null });
   });
 
   app.get("/api/public-config", (req, res) => {
@@ -125,41 +138,32 @@ function buildDashboard() {
   });
 
   app.get("/api/stats", mustBeLoggedIn, (req, res) => {
-    const stats = {
-      total: db.prepare("SELECT COUNT(*) c FROM whitelist_requests").get().c,
-      pending: db.prepare("SELECT COUNT(*) c FROM whitelist_requests WHERE status='pending'").get().c,
-      approved: db.prepare("SELECT COUNT(*) c FROM whitelist_requests WHERE status='approved'").get().c,
-      rejected: db.prepare("SELECT COUNT(*) c FROM whitelist_requests WHERE status='rejected'").get().c
-    };
+    const filter=req.session.role==='founder'?' WHERE server_name LIKE ?':'';
+    const args=req.session.role==='founder'?[req.session.guildId+':%']:[];
+    const count=status=>db.prepare('SELECT COUNT(*) c FROM whitelist_requests'+filter+(status?(filter?' AND':' WHERE')+' status=?':'')).get(...args,...(status?[status]:[])).c;
+    const stats={total:count(),pending:count('pending'),approved:count('approved'),rejected:count('rejected')};
     res.json(stats);
   });
 
   app.get("/api/requests", mustBeLoggedIn, (req, res) => {
     const q = String(req.query.q || "").trim();
-    let rows;
-    if (q) {
-      const like = `%${q}%`;
-      rows = db.prepare(`
-        SELECT * FROM whitelist_requests
-        WHERE game_name LIKE ? OR discord_username LIKE ? OR platform LIKE ? OR server_name LIKE ?
-        ORDER BY id DESC
-      `).all(like, like, like, like);
-    } else {
-      rows = db.prepare("SELECT * FROM whitelist_requests ORDER BY id DESC").all();
-    }
+    const params=[];const conditions=[];
+    if(req.session.role==='founder'){conditions.push('server_name LIKE ?');params.push(req.session.guildId+':%')}
+    if(q){conditions.push('(game_name LIKE ? OR discord_username LIKE ? OR platform LIKE ? OR server_name LIKE ?)');params.push(...Array(4).fill('%'+q+'%'))}
+    const rows=db.prepare('SELECT * FROM whitelist_requests'+(conditions.length?' WHERE '+conditions.join(' AND '):'')+' ORDER BY id DESC').all(...params);
     res.json(rows);
   });
 
   app.post("/api/requests/:id/approve", mustBeLoggedIn, async (req, res) => {
     const row = db.prepare("SELECT * FROM whitelist_requests WHERE id=?").get(req.params.id);
-    if (!row) return res.status(404).json({ error: "Demande introuvable" });
+    if (!row || !founders.canAccess(req,row)) return res.status(404).json({ error: "Demande introuvable" });
 
     let syncStatus = "not_applicable";
     let syncMessage = "Validation Discord uniquement";
 
     // Nitrado documente l'automatisation fichier pour DayZ PC.
     // Sur console, on garde la validation dans DayZ Gate sans prétendre à une API non documentée.
-    if (row.platform === "PC" && nitrado.getConnectionStatus().connected && nitrado.getConnectionStatus().selected.serviceId) {
+    if (row.platform === "PC" && (req.session.role==='founder'||req.session.selectedGuildId===row.server_name.split(":")[0]) && nitrado.getConnectionStatus().connected && nitrado.getConnectionStatus().selected.serviceId) {
       try {
         const result = await nitrado.addPcWhitelistEntry(row.game_name);
         syncStatus = result.changed ? "synced" : "already_present";
@@ -181,7 +185,7 @@ function buildDashboard() {
       WHERE id=?
     `).run(req.session.admin, syncStatus, syncMessage, req.params.id);
 
-    try { await grantWhitelistRole(row.discord_user_id); }
+    try { await grantWhitelistRole(row.discord_user_id,row.server_name.split(":")[0]); }
     catch (e) { console.error("Impossible d'attribuer le rôle Discord :", e.message); }
 
     res.json({ ok: true, nitrado: { status: syncStatus, message: syncMessage } });
@@ -189,7 +193,7 @@ function buildDashboard() {
 
   app.post("/api/requests/:id/reject", mustBeLoggedIn, async (req, res) => {
     const row = db.prepare("SELECT * FROM whitelist_requests WHERE id=?").get(req.params.id);
-    if (!row) return res.status(404).json({ error: "Demande introuvable" });
+    if (!row || !founders.canAccess(req,row)) return res.status(404).json({ error: "Demande introuvable" });
 
     db.prepare(`
       UPDATE whitelist_requests
@@ -198,7 +202,7 @@ function buildDashboard() {
       WHERE id=?
     `).run(req.session.admin, req.params.id);
 
-    try { await removeWhitelistRole(row.discord_user_id); }
+    try { await removeWhitelistRole(row.discord_user_id,row.server_name.split(":")[0]); }
     catch (e) { console.error("Impossible de retirer le rôle Discord :", e.message); }
 
     res.json({ ok: true });
@@ -206,9 +210,9 @@ function buildDashboard() {
 
   app.delete("/api/requests/:id", mustBeLoggedIn, async (req, res) => {
     const row = db.prepare("SELECT * FROM whitelist_requests WHERE id=?").get(req.params.id);
-    if (!row) return res.status(404).json({ error: "Demande introuvable" });
+    if (!row || !founders.canAccess(req,row)) return res.status(404).json({ error: "Demande introuvable" });
     db.prepare("DELETE FROM whitelist_requests WHERE id=?").run(req.params.id);
-    try { await removeWhitelistRole(row.discord_user_id); }
+    try { await removeWhitelistRole(row.discord_user_id,row.server_name.split(":")[0]); }
     catch (e) { console.error("Impossible de retirer le rôle Discord :", e.message); }
     res.json({ ok: true });
   });
