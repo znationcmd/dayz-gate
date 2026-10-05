@@ -5,17 +5,10 @@ const { client } = require("./bot");
 const buildDashboard = require("./dashboard");
 
 async function main() {
-  const required = [
-    "DISCORD_TOKEN",
-    "DISCORD_CLIENT_ID",
-    "DISCORD_GUILD_ID",
-    "DASHBOARD_USER",
-    "DASHBOARD_PASSWORD"
-  ];
-
+  const required = ["DISCORD_TOKEN", "DISCORD_CLIENT_ID"];
   const missing = required.filter(k => !process.env[k]);
   if (missing.length) {
-    console.error("Variables manquantes dans .env :", missing.join(", "));
+    console.error("Variables Railway manquantes :", missing.join(", "));
     process.exit(1);
   }
 
@@ -24,13 +17,7 @@ async function main() {
 
   const app = buildDashboard();
   const port = Number(process.env.PORT || 3000);
-
-  app.listen(port, "0.0.0.0", () => {
-    console.log(`Dashboard DayZ Gate : http://localhost:${port}`);
-  });
+  app.listen(port, "0.0.0.0", () => console.log(`Dashboard DayZ Gate actif sur le port ${port}`));
 }
 
-main().catch(err => {
-  console.error(err);
-  process.exit(1);
-});
+main().catch(err => { console.error(err); process.exit(1); });
