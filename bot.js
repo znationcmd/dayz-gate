@@ -1,7 +1,7 @@
 const { Client, GatewayIntentBits } = require("discord.js");
 const db = require("./db");
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 client.once("ready", () => console.log(`Bot connecté : ${client.user.tag} | ${client.guilds.cache.size} serveur(s)`));
 
