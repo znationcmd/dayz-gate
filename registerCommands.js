@@ -1,36 +1,20 @@
 const { REST, Routes, SlashCommandBuilder } = require("discord.js");
 
-async function registerCommands() {
-  const command = new SlashCommandBuilder()
+function commands() {
+  return [new SlashCommandBuilder()
     .setName("whitelist")
     .setDescription("Faire une demande de whitelist DayZ")
-    .addStringOption(option =>
-      option.setName("plateforme")
-        .setDescription("Ta plateforme")
-        .setRequired(true)
-        .addChoices(
-          { name: "PC", value: "PC" },
-          { name: "Xbox", value: "Xbox" },
-          { name: "PlayStation", value: "PlayStation" }
-        )
-    )
-    .addStringOption(option =>
-      option.setName("identifiant")
-        .setDescription("PC: UID DayZ 44 caractères • Xbox: Gamertag • PlayStation: ID PSN")
-        .setRequired(true)
-    )
-    .addStringOption(option =>
-      option.setName("serveur")
-        .setDescription("Nom du serveur DayZ")
-        .setRequired(true)
-    );
-
-  const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
-  await rest.put(
-    Routes.applicationGuildCommands(process.env.DISCORD_CLIENT_ID, process.env.DISCORD_GUILD_ID),
-    { body: [command.toJSON()] }
-  );
-  console.log("Commande /whitelist enregistrée.");
+    .addStringOption(o => o.setName("plateforme").setDescription("Ta plateforme").setRequired(true)
+      .addChoices({name:"PC",value:"PC"},{name:"Xbox",value:"Xbox"},{name:"PlayStation",value:"PlayStation"}))
+    .addStringOption(o => o.setName("identifiant").setDescription("PC: UID DayZ • Xbox: Gamertag • PlayStation: ID PSN").setRequired(true))
+    .addStringOption(o => o.setName("serveur").setDescription("Nom du serveur DayZ").setRequired(true)
+  )].map(c => c.toJSON());
 }
 
+async function registerCommands() {
+  const rest = new REST({version:"10"}).setToken(process.env.DISCORD_TOKEN);
+  // Commande globale : elle devient disponible dans tous les Discord qui installent DayZ Gate.
+  await rest.put(Routes.applicationCommands(process.env.DISCORD_CLIENT_ID), {body: commands()});
+  console.log("Commande globale /whitelist enregistrée pour le mode multi-serveurs.");
+}
 module.exports = registerCommands;
