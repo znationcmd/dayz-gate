@@ -77,7 +77,7 @@ function mount(app,mustBeLoggedIn){
  app.get('/api/premium',mustBeLoggedIn,async(req,res)=>res.json(await status(scope(req),user(req),isOwner(req))));
  app.post('/api/premium/payment-request',mustBeLoggedIn,async(req,res)=>res.json(await requestPayment(scope(req),user(req),String(req.body.product||''),String(req.body.billing||''))));
  app.post('/api/premium/redeem',mustBeLoggedIn,async(req,res)=>res.json(await redeem(scope(req),user(req),String(req.body.code||''))));
- app.post('/api/premium/servers',mustBeLoggedIn,async(req,res)=>res.json(await registerServer(scope(req),user(req),req.body.label,req.body.serviceId)));
+ app.post('/api/premium/servers',mustBeLoggedIn,async(req,res)=>res.json(await registerServer(scope(req),user(req),req.body.label,req.body.serviceId,isOwner(req))));
  app.delete('/api/premium/servers/:id',mustBeLoggedIn,async(req,res)=>res.json(await removeServer(scope(req),req.params.id)));
  app.get('/api/premium/admin',mustBeLoggedIn,async(req,res)=>{if(req.session.role!=='owner')return res.status(403).json({error:'Réservé au propriétaire'});res.json(await admin())});
  app.post('/api/premium/admin/code',mustBeLoggedIn,async(req,res)=>{if(req.session.role!=='owner')return res.status(403).json({error:'Réservé au propriétaire'});res.json(await generateCode(user(req),String(req.body.product||''),String(req.body.billing||'')))});
