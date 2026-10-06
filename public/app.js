@@ -44,7 +44,7 @@ function mountMenu(authenticated=false){
   :root{--gate-header:88px;--gate-rail:72px;--gate-panel:330px}
   .gate-draft-header{position:fixed;left:0;right:0;top:0;height:calc(var(--gate-header) + env(safe-area-inset-top,0px));padding-top:env(safe-area-inset-top,0px);z-index:70;display:none;align-items:center;justify-content:space-between;background:#202428;border-bottom:1px solid #30363a;box-shadow:0 6px 18px #0005}
   .gate-draft-header button{width:54px;height:54px;padding:0;border:0;background:transparent;color:#e36754;font-size:30px;display:grid;place-items:center}
-  .gate-draft-header img{width:46px;height:46px;object-fit:contain}
+  .gate-draft-header>img{position:absolute;left:50%;transform:translateX(-50%);width:46px;height:46px;object-fit:contain}.gate-draft-actions{display:flex;align-items:center;gap:0;margin-left:auto}.gate-draft-refresh{font-size:30px!important;font-weight:900!important}.gate-draft-refresh:disabled{opacity:.45}
   .gate-draft-grid{display:grid!important;grid-template-columns:repeat(2,13px);grid-template-rows:repeat(2,13px);gap:5px!important}
   .gate-draft-grid i{display:block;width:13px;height:13px;border-radius:2px;background:#e36754}
   .gate-guild-rail{position:fixed;left:0;top:0;bottom:0;z-index:54;width:72px;padding:18px 8px;display:flex;flex-direction:column;align-items:center;gap:12px;background:#1f2327;border-right:1px solid #34393d;overflow-y:auto}
@@ -72,16 +72,16 @@ function mountMenu(authenticated=false){
   @media(max-width:540px){:root{--gate-rail:66px}.gate-guild-rail{width:66px}.gate-guild-btn{width:48px;height:48px;min-height:48px}.gate-side{left:66px;width:min(315px,calc(88vw - 66px))}}
   `;document.head.appendChild(style)
  }
- const header=document.createElement('header');header.className='gate-draft-header';header.innerHTML='<button type="button" class="gate-draft-menu" aria-label="Menu">☰</button><img src="/icon.svg" alt="DAYZ GATE"><button type="button" class="gate-draft-grid" aria-label="Modules"><i></i><i></i><i></i><i></i></button>';
+ const header=document.createElement('header');header.className='gate-draft-header';header.innerHTML='<button type="button" class="gate-draft-menu" aria-label="Menu">☰</button><img src="/icon.svg" alt="DAYZ GATE"><div class="gate-draft-actions"><button id="dayz-force-refresh" type="button" class="gate-draft-refresh" aria-label="Actualiser" title="Actualiser">↻</button><button type="button" class="gate-draft-grid" aria-label="Modules"><i></i><i></i><i></i><i></i></button></div>';
  const rail=document.createElement('div');rail.className='gate-guild-rail';rail.setAttribute('aria-label','Discord installés');
  const side=document.createElement('aside');side.className='gate-side';side.id='gate-side';
  const grouped=menuGroups.map(([title,keys])=>{const rows=keys.map(key=>{const item=menuItems.find(([,k])=>k===key);if(!item)return'';const [label]=item;return `<button data-page="${key}" data-search="${(label+' '+key).toLowerCase()}">${menuIcon(key)}<span>${label}</span></button>`}).join('');return rows?`<section class="gate-group" data-group><h3>${title}</h3>${rows}</section>`:''}).join('');
  side.innerHTML=`<div class="gate-side-top"><div class="gate-server-context"><div class="fallback">DZ</div><div><strong>DAYZ GATE</strong><small>Discord sélectionné</small></div></div><label class="gate-search-wrap"><span>⌕</span><input class="gate-module-search" placeholder="Rechercher un module" autocomplete="off"></label></div><nav class="gate-links" aria-label="Menu principal">${grouped}</nav><a class="gate-discord" href="https://discord.gg/3JMrNpGFr" target="_blank" rel="noopener"><strong>Rejoindre le Discord DAYZ GATE</strong><span>discord.gg/3JMrNpGFr</span></a>`;
  const shade=document.createElement('div');shade.className='gate-shade';
- const toggle=header.querySelector('.gate-draft-menu'),gridButton=header.querySelector('.gate-draft-grid');
+ const toggle=header.querySelector('.gate-draft-menu'),gridButton=header.querySelector('.gate-draft-grid'),refreshButton=header.querySelector('.gate-draft-refresh');
  const open=()=>{side.classList.add('open');shade.classList.add('open');document.body.classList.add('gate-menu-open')};
  const close=()=>{side.classList.remove('open');shade.classList.remove('open');document.body.classList.remove('gate-menu-open')};
- toggle.onclick=()=>side.classList.contains('open')?close():open();gridButton.onclick=()=>side.classList.contains('open')?close():open();shade.onclick=close;document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
+ toggle.onclick=()=>side.classList.contains('open')?close():open();gridButton.onclick=()=>side.classList.contains('open')?close():open();if(refreshButton)refreshButton.onclick=forceDayzGateRefresh;shade.onclick=close;document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
  side.querySelectorAll('[data-page]').forEach(button=>button.onclick=()=>{side.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('selected',b===button));close();openMenuPage(button.dataset.page,menuItems.find(([,k])=>k===button.dataset.page)?.[0]||button.textContent.trim(),authenticated)});
  const search=side.querySelector('.gate-module-search');search.oninput=()=>{const q=search.value.trim().toLowerCase();side.querySelectorAll('[data-page]').forEach(b=>b.hidden=!!q&&!b.dataset.search.includes(q));side.querySelectorAll('[data-group]').forEach(g=>g.hidden=![...g.querySelectorAll('[data-page]')].some(b=>!b.hidden))};
  document.body.prepend(shade,side,rail,header);
@@ -312,17 +312,25 @@ body{animation:dayzBackgroundDrift 34s ease-in-out infinite;background-size:auto
 
 let dayzGateReloading=false,dayzGateSw=null;
 async function forceDayzGateRefresh(){
- const btn=document.getElementById('dayz-force-refresh');if(btn){btn.disabled=true;btn.textContent='…'}
+ const btn=document.getElementById('dayz-force-refresh');if(btn){btn.disabled=true;btn.dataset.oldText=btn.textContent;btn.textContent='…'}
  try{
+  if('caches' in window){
+   const keys=await caches.keys();
+   await Promise.all(keys.filter(k=>k.startsWith('dayz-gate-')).map(k=>caches.delete(k)));
+  }
   if('serviceWorker' in navigator){
    dayzGateSw=dayzGateSw||await navigator.serviceWorker.getRegistration('/');
    if(dayzGateSw){
     await dayzGateSw.update();
-    if(dayzGateSw.waiting){dayzGateSw.waiting.postMessage({type:'SKIP_WAITING'});return}
+    if(dayzGateSw.waiting){
+     dayzGateSw.waiting.postMessage({type:'SKIP_WAITING'});
+     setTimeout(()=>location.reload(),900);
+     return;
+    }
    }
   }
   location.reload();
- }catch{location.reload()}finally{if(btn){btn.disabled=false;btn.textContent='↻ Actualiser'}}
+ }catch{location.reload()}finally{if(btn){btn.disabled=false;btn.textContent=btn.dataset.oldText||'↻'}}
 }
 async function checkDayzGateUpdate(){
  if(!navigator.onLine||!('serviceWorker' in navigator))return;
