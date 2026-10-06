@@ -111,7 +111,21 @@ function buildDashboard() {
 
   app.get("/api/me", async (req,res)=> {
     const active=req.session.role!=="founder"||req.session.authMethod==="discord"||Boolean((await db.prepare("SELECT id FROM founder_accounts WHERE id=? AND active=1").get(req.session.accountId)));
-    res.json({ loggedIn: Boolean(req.session?.admin)&&active,role:req.session.role||"owner",guildId:req.session.guildId||null });
+    const loggedIn=Boolean(req.session?.admin)&&active;
+    let guilds=[];
+    if(loggedIn&&client.isReady()){
+      const installed=[...client.guilds.cache.values()].map(g=>({id:g.id,name:g.name,icon:g.iconURL({extension:'webp',size:128})||null,ownerId:g.ownerId,memberCount:g.memberCount||0,installed:true})).sort((a,b)=>a.name.localeCompare(b.name,'fr'));
+      guilds=req.session.role==='owner'?installed:installed.filter(g=>g.id===req.session.guildId);
+    }
+    res.json({ loggedIn,role:req.session.role||"owner",guildId:req.session.guildId||null,selectedGuildId:req.session.role==='owner'?(req.session.selectedGuildId||null):req.session.guildId||null,guilds });
+  });
+  app.post("/api/guild/select", mustBeLoggedIn, async (req,res)=> {
+    const id=String(req.body?.id||'');
+    const guild=client.isReady()?client.guilds.cache.get(id):null;
+    if(!guild)return res.status(404).json({error:'Ce Discord n’est pas installé sur DAYZ GATE.'});
+    if(req.session.role!=='owner'&&id!==req.session.guildId)return res.status(403).json({error:'Accès refusé à ce Discord.'});
+    req.session.selectedGuildId=id;
+    req.session.save(()=>res.json({ok:true,id,name:guild.name,icon:guild.iconURL({extension:'webp',size:128})||null}));
   });
 
   app.get("/api/public-config", async (req,res)=> {
