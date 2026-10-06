@@ -11,6 +11,7 @@ const radio=require('./radio');
 const premium=require('./premium');
 const topServers=require('./top-servers');
 const fileValidator=require('./file-validator');
+const community=require('./community');
 const {client}=require("./bot");
 
 function buildDashboard() {
@@ -67,6 +68,7 @@ function buildDashboard() {
   founders.mount(app,mustBeLoggedIn,client);
   radio.mount(app,mustBeLoggedIn);
   premium.mount(app,mustBeLoggedIn);
+  community.mount(app,mustBeLoggedIn);
   app.post('/api/top-servers/register',mustBeLoggedIn,async(req,res)=>{if(req.session.role!=='owner')return res.status(403).json({error:'Réservé au propriétaire'});res.json(await topServers.register({...req.body,source_bot:'DAYZ GATE'}));});
   app.post('/api/file-validator',mustBeLoggedIn,async(req,res)=>{try{res.json(fileValidator.validateFile(String(req.body.filename||''),String(req.body.content||'')))}catch(e){res.status(400).json({error:e.message})}});
   app.post('/api/login',async (req,res)=>{
