@@ -1,15 +1,17 @@
 const crypto=require('crypto');
 const db=require('./db');
 const session=require('express-session');
+let lastSessionCleanup=0;
+async function cleanupSessions(){const now=Date.now();if(now-lastSessionCleanup<15*60*1000)return;lastSessionCleanup=now;await db.prepare('DELETE FROM dashboard_sessions WHERE expires_at<?').run(now)}
 
 function hashPassword(password){const salt=crypto.randomBytes(16).toString('hex');return salt+':'+crypto.scryptSync(password,salt,64).toString('hex')}
 function verifyPassword(password,hash){try{const [salt,key]=hash.split(':');const input=crypto.scryptSync(password,salt,64);const expected=Buffer.from(key,'hex');return input.length===expected.length&&crypto.timingSafeEqual(input,expected)}catch{return false}}
 function tokenHash(token){return crypto.createHash('sha256').update(token).digest('hex')}
 class Store extends session.Store{
  async get(sid,cb){try{const row=(await db.prepare('SELECT data FROM dashboard_sessions WHERE sid=? AND expires_at>?').get(sid,Date.now()));cb(null,row?JSON.parse(row.data):null)}catch(e){cb(e)}}
- async set(sid,data,cb){try{const expiry=data.cookie.expires?new Date(data.cookie.expires).getTime():Date.now()+30*86400000;(await db.prepare('INSERT INTO dashboard_sessions VALUES(?,?,?) ON CONFLICT(sid) DO UPDATE SET data=excluded.data,expires_at=excluded.expires_at').run(sid,JSON.stringify(data),expiry));(await db.prepare('DELETE FROM dashboard_sessions WHERE expires_at<?').run(Date.now()));cb?.()}catch(e){cb?.(e)}}
+ async set(sid,data,cb){try{const expiry=data.cookie.expires?new Date(data.cookie.expires).getTime():Date.now()+30*86400000;await db.prepare('INSERT INTO dashboard_sessions VALUES(?,?,?) ON CONFLICT(sid) DO UPDATE SET data=excluded.data,expires_at=excluded.expires_at').run(sid,JSON.stringify(data),expiry);await cleanupSessions();cb?.()}catch(e){cb?.(e)}}
  async destroy(sid,cb){try{(await db.prepare('DELETE FROM dashboard_sessions WHERE sid=?').run(sid));cb?.()}catch(e){cb?.(e)}}
- touch(sid,data,cb){this.set(sid,data,cb)}
+ async touch(sid,data,cb){try{const expiry=data.cookie?.expires?new Date(data.cookie.expires).getTime():Date.now()+30*86400000;await db.prepare('UPDATE dashboard_sessions SET expires_at=? WHERE sid=?').run(expiry,sid);await cleanupSessions();cb?.()}catch(e){cb?.(e)}}
 }
 function canAccess(req,row){const id=req.session.selectedGuildId||req.session.guildId;return req.session.role!=='founder'||Boolean(id&&row.server_name.startsWith(id+':'))}
 function mount(app,mustLogin,client){
