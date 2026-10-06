@@ -10,6 +10,7 @@ const founders=require("./founders");
 const radio=require('./radio');
 const premium=require('./premium');
 const topServers=require('./top-servers');
+const fileValidator=require('./file-validator');
 const {client}=require("./bot");
 
 function buildDashboard() {
@@ -24,7 +25,7 @@ function buildDashboard() {
 
   app.set("trust proxy", 1);
   app.use(helmet({ contentSecurityPolicy: false }));
-  app.use(express.json());
+  app.use(express.json({limit:'6mb'}));
   app.use(express.urlencoded({ extended: true }));
   app.use(session({
     secret: process.env.SESSION_SECRET || "change-me",
@@ -67,6 +68,7 @@ function buildDashboard() {
   radio.mount(app,mustBeLoggedIn);
   premium.mount(app,mustBeLoggedIn);
   app.post('/api/top-servers/register',mustBeLoggedIn,async(req,res)=>{if(req.session.role!=='owner')return res.status(403).json({error:'Réservé au propriétaire'});res.json(await topServers.register({...req.body,source_bot:'DAYZ GATE'}));});
+  app.post('/api/file-validator',mustBeLoggedIn,async(req,res)=>{try{res.json(fileValidator.validateFile(String(req.body.filename||''),String(req.body.content||'')))}catch(e){res.status(400).json({error:e.message})}});
   app.post('/api/login',async (req,res)=>{
     const key=req.ip;const now=Date.now();const tries=loginAttempts.get(key)||{count:0,time:now};if(now-tries.time>900000){tries.count=0;tries.time=now}if(tries.count>=10)return res.status(429).json({error:'Réessaie dans 15 minutes'});tries.count++;loginAttempts.set(key,tries);
     const {username,password}=req.body;if(typeof username!=='string'||typeof password!=='string'||password.length>128)return res.status(401).json({error:'Identifiants incorrects'});
