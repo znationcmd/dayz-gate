@@ -15,7 +15,7 @@ const community=require('./community');
 const {client}=require("./bot");
 
 function buildDashboard() {
-  const scopeId=req=>req.session.role==='founder'?req.session.guildId:(req.session.selectedGuildId||req.session.guildId||'owner');
+  const scopeId=req=>req.session.selectedGuildId||req.session.guildId||'owner';
   const app = express();
   // Express 4 does not catch rejected promises from async route handlers.
   for (const method of ['get', 'post', 'delete']) {
@@ -115,15 +115,31 @@ function buildDashboard() {
     let guilds=[];
     if(loggedIn&&client.isReady()){
       const installed=[...client.guilds.cache.values()].map(g=>({id:g.id,name:g.name,icon:g.iconURL({extension:'webp',size:128})||null,ownerId:g.ownerId,memberCount:g.memberCount||0,installed:true})).sort((a,b)=>a.name.localeCompare(b.name,'fr'));
-      guilds=req.session.role==='owner'?installed:installed.filter(g=>g.id===req.session.guildId);
+      if(req.session.role==='owner')guilds=installed;
+      else if(req.session.authMethod==='discord'&&req.session.discordUserId){
+        for(const g of installed){
+          try{
+            const guild=client.guilds.cache.get(g.id)||await client.guilds.fetch(g.id);
+            const member=await guild.members.fetch(req.session.discordUserId);
+            if(guild.ownerId===req.session.discordUserId||member.permissions.has(32n)||member.permissions.has(8n))guilds.push(g);
+          }catch{}
+        }
+      }else guilds=installed.filter(g=>g.id===(req.session.selectedGuildId||req.session.guildId));
     }
-    res.json({ loggedIn,role:req.session.role||"owner",guildId:req.session.guildId||null,selectedGuildId:req.session.role==='owner'?(req.session.selectedGuildId||null):req.session.guildId||null,guilds });
+    const selected=req.session.selectedGuildId||req.session.guildId||guilds[0]?.id||null;
+    res.json({ loggedIn,role:req.session.role||"owner",guildId:req.session.guildId||null,selectedGuildId:selected,guilds });
   });
   app.post("/api/guild/select", mustBeLoggedIn, async (req,res)=> {
     const id=String(req.body?.id||'');
     const guild=client.isReady()?client.guilds.cache.get(id):null;
     if(!guild)return res.status(404).json({error:'Ce Discord n’est pas installé sur DAYZ GATE.'});
-    if(req.session.role!=='owner'&&id!==req.session.guildId)return res.status(403).json({error:'Accès refusé à ce Discord.'});
+    if(req.session.role!=='owner'){
+      if(req.session.authMethod!=='discord'||!req.session.discordUserId)return res.status(403).json({error:'Accès refusé à ce Discord.'});
+      try{
+        const member=await guild.members.fetch(req.session.discordUserId);
+        if(guild.ownerId!==req.session.discordUserId&&!member.permissions.has(32n)&&!member.permissions.has(8n))return res.status(403).json({error:'Droits fondateur nécessaires sur ce Discord.'});
+      }catch{return res.status(403).json({error:'Accès refusé à ce Discord.'})}
+    }
     req.session.selectedGuildId=id;
     req.session.save(()=>res.json({ok:true,id,name:guild.name,icon:guild.iconURL({extension:'webp',size:128})||null}));
   });
@@ -199,8 +215,8 @@ function buildDashboard() {
   });
 
   app.get("/api/stats", mustBeLoggedIn, async (req,res)=> {
-    const filter=req.session.role==='founder'?' WHERE server_name LIKE ?':'';
-    const args=req.session.role==='founder'?[req.session.guildId+':%']:[];
+    const scoped=scopeId(req);const filter=req.session.role==='founder'?' WHERE server_name LIKE ?':'';
+    const args=req.session.role==='founder'?[scoped+':%']:[];
     const count=async status=>(await db.prepare('SELECT COUNT(*) c FROM whitelist_requests'+filter+(status?(filter?' AND':' WHERE')+' status=?':'')).get(...args,...(status?[status]:[]))).c;
     const stats={total:await count(),pending:await count('pending'),approved:await count('approved'),rejected:await count('rejected')};
     res.json(stats);
@@ -209,7 +225,7 @@ function buildDashboard() {
   app.get("/api/requests", mustBeLoggedIn, async (req,res)=> {
     const q = String(req.query.q || "").trim();
     const params=[];const conditions=[];
-    if(req.session.role==='founder'){conditions.push('server_name LIKE ?');params.push(req.session.guildId+':%')}
+    if(req.session.role==='founder'){conditions.push('server_name LIKE ?');params.push(scopeId(req)+':%')}
     if(q){conditions.push('(game_name LIKE ? OR discord_username LIKE ? OR platform LIKE ? OR server_name LIKE ?)');params.push(...Array(4).fill('%'+q+'%'))}
     const rows=(await db.prepare('SELECT * FROM whitelist_requests'+(conditions.length?' WHERE '+conditions.join(' AND '):'')+' ORDER BY id DESC').all(...params));
     res.json(rows);
