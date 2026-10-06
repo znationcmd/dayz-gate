@@ -40,6 +40,33 @@ CREATE TABLE IF NOT EXISTS founder_invites (
 CREATE TABLE IF NOT EXISTS dashboard_sessions (
  sid TEXT PRIMARY KEY, data TEXT NOT NULL, expires_at ${expiry} NOT NULL
 );
+CREATE TABLE IF NOT EXISTS dayz_activity_logs (
+ event_id TEXT PRIMARY KEY, guild_id TEXT NOT NULL, server_id TEXT NOT NULL DEFAULT '',
+ event_type TEXT NOT NULL, player_name TEXT, player_id TEXT, killer_name TEXT, killer_id TEXT,
+ cause TEXT, weapon TEXT, distance REAL, x REAL, y REAL, z REAL,
+ log_time TEXT, occurred_at TEXT NOT NULL DEFAULT ${clock}, raw TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_dayz_activity_guild_time ON dayz_activity_logs(guild_id,occurred_at);
+CREATE TABLE IF NOT EXISTS dayz_construction_logs (
+ event_id TEXT PRIMARY KEY, guild_id TEXT NOT NULL, server_id TEXT NOT NULL DEFAULT '',
+ player_name TEXT, player_id TEXT, object_name TEXT NOT NULL,
+ x REAL, y REAL, z REAL, log_time TEXT, occurred_at TEXT NOT NULL DEFAULT ${clock}, raw TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_dayz_construction_guild_time ON dayz_construction_logs(guild_id,occurred_at);
+CREATE TABLE IF NOT EXISTS recurring_messages (
+ id TEXT PRIMARY KEY, guild_id TEXT NOT NULL, channel_id TEXT NOT NULL,
+ message TEXT NOT NULL, interval_minutes INTEGER NOT NULL, enabled INTEGER NOT NULL DEFAULT 1,
+ next_run_at ${expiry} NOT NULL, created_by TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT ${clock}
+);
+CREATE TABLE IF NOT EXISTS member_xp (
+ guild_id TEXT NOT NULL, user_id TEXT NOT NULL, xp INTEGER NOT NULL DEFAULT 0,
+ level INTEGER NOT NULL DEFAULT 0, last_message_at ${expiry} NOT NULL DEFAULT 0,
+ PRIMARY KEY(guild_id,user_id)
+);
+CREATE TABLE IF NOT EXISTS warnings (
+ id ${id}, guild_id TEXT NOT NULL, user_id TEXT NOT NULL, moderator_id TEXT NOT NULL,
+ reason TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT ${clock}
+);
 CREATE TABLE IF NOT EXISTS database_migrations (name TEXT PRIMARY KEY);
 `;
 };
