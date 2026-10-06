@@ -89,7 +89,7 @@ async function importSqlite() {
 async function initialize() {
   if (postgres) {
     const { Pool } = require('pg');
-    pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 5, connectionTimeoutMillis: 10000, idleTimeoutMillis: 30000 });
+    pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 2, connectionTimeoutMillis: 10000, idleTimeoutMillis: 10000, allowExitOnIdle: true });
     pool.on('error', err => console.error('Connexion Postgres interrompue :', err.code || err.name));
     await pool.query(schema(true));
     await pool.query('ALTER TABLE whitelist_requests ADD COLUMN IF NOT EXISTS nitrado_sync_status TEXT; ALTER TABLE whitelist_requests ADD COLUMN IF NOT EXISTS nitrado_sync_message TEXT');
