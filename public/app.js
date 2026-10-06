@@ -117,8 +117,38 @@ function showToolsGate(main){
  <section class="reference-box"><h3>☁ Nitrado</h3><p>Connexion et sélection du serveur DayZ.</p><button class="reference-red" onclick="window.openGateHelp&&window.openGateHelp('settings')">Configurer</button></section>
  <section class="reference-box"><h3>✦ Aide & IA</h3><p>Explique Whitelist, Premium, Top Serveurs, Radio, Nitrado et installation.</p><button class="reference-red" onclick="window.openGateHelp&&window.openGateHelp('ai')">Ouvrir l’IA</button></section>
  <section class="reference-box"><h3>✓ Whitelist</h3><p>Demandes joueurs, validation admin et rôle Discord.</p><button class="reference-red" onclick="openMenuPage('requests','Demandes',true)">Ouvrir</button></section>
+ <section class="reference-box"><h3>🧰 Validateur & correction</h3><p>JSON, XML et INI : erreurs, corrections sûres et téléchargement.</p><button class="reference-red" onclick="openMenuPage('validator','Validateur fichiers',true)">Ouvrir</button></section>
  </div>`;main.querySelector('.title').after(notice);
 }
+let gateValidatorFile=null,gateValidatorResult=null;
+function showFileValidatorGate(main){
+ const notice=document.createElement('section');notice.className='gate-menu-notice';notice.innerHTML=`<h2>🧰 Validateur & correcteur de fichiers</h2><p>JSON, XML et INI · 5 Mo maximum. Le bot ne corrige que ce qui est sûr.</p>
+ <section class="reference-box" style="margin-top:14px"><input id="gate-validator-file" type="file" accept=".json,.xml,.ini,application/json,application/xml,text/xml,text/plain"><p><button class="reference-red" onclick="runFileValidatorGate()">Analyser et corriger</button></p><div id="gate-validator-result"></div></section>`;main.querySelector('.title').after(notice);
+ document.getElementById('gate-validator-file').onchange=e=>{gateValidatorFile=e.target.files?.[0]||null;gateValidatorResult=null;document.getElementById('gate-validator-result').textContent='';};
+}
+async function runFileValidatorGate(){
+ const box=document.getElementById('gate-validator-result');if(!gateValidatorFile){box.textContent='Choisis un fichier.';return}
+ if(gateValidatorFile.size>5*1024*1024){box.textContent='Fichier trop volumineux (5 Mo maximum).';return}
+ box.textContent='Analyse en cours…';
+ try{
+  const content=await gateValidatorFile.text();
+  const data=await api('/api/file-validator',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filename:gateValidatorFile.name,content})});
+  gateValidatorResult=data;
+  const title=data.valid?'✅ Fichier valide':data.correctable?'🛠 Correction disponible':'❌ Correction manuelle nécessaire';
+  const error=!data.valid&&data.error?'<p><b>Ligne '+esc(data.line||'?')+(data.column?', colonne '+esc(data.column):'')+'</b><br>'+esc(data.error)+'</p>':'';
+  const fixes=(data.fixes||[]).length?'<h4>Corrections proposées</h4><ul>'+data.fixes.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':'';
+  const warnings=(data.warnings||[]).length?'<h4>Points à vérifier</h4><ul>'+data.warnings.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':'';
+  const download=data.correctable?'<button class="reference-red" onclick="downloadCorrectedDayzGate()">Télécharger le fichier corrigé</button>':'';
+  box.innerHTML='<h3>'+title+'</h3><p>'+esc(data.format||'')+'</p>'+error+fixes+warnings+download;
+ }catch(e){box.textContent=e.message||'Analyse impossible.'}
+}
+function downloadCorrectedDayzGate(){
+ if(!gateValidatorResult?.correctedContent||!gateValidatorFile)return;
+ const dot=gateValidatorFile.name.lastIndexOf('.'),base=dot>0?gateValidatorFile.name.slice(0,dot):gateValidatorFile.name,ext=dot>0?gateValidatorFile.name.slice(dot):'';
+ const blob=new Blob([gateValidatorResult.correctedContent],{type:'text/plain;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=base+'.corrige'+ext;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+Object.assign(window,{runFileValidatorGate,downloadCorrectedDayzGate});
+
 function openMenuPage(key,label,authenticated){
  document.querySelector('.gate-menu-notice')?.remove();
  if(!authenticated){if(key==='home'){window.scrollTo({top:0,behavior:'smooth'});return}showLogin(label);return}
@@ -127,6 +157,7 @@ function openMenuPage(key,label,authenticated){
  if(key==='radio'){showRadioGate(main);return}
  if(key==='topservers'){showSharedTopServers(main);return}
  if(key==='tools'){showToolsGate(main);return}
+ if(key==='validator'){showFileValidatorGate(main);return}
  if(key==='partners'){main.insertAdjacentHTML('afterbegin','<section class="gate-menu-notice"><h2>INTERPOL · PARTENARIATS OFFICIELS</h2><p><strong>EXTINCTION ++ RSS</strong> ↔ <strong>DAYZ GATE</strong> ↔ <strong>BOT ARK</strong></p><p>Réseau commun Valhalla Extinction : actualités, outils serveurs, communautés et services connectés.</p></section>');return}
  main.querySelector('.title').textContent=label;
  if(['home','requests','players','shield'].includes(key)){loadRows(document.getElementById('search').value);document.getElementById('rows').closest('section').querySelector('h2').textContent=window.approvedOnly?'Joueurs whitelistés':'Demandes récentes';document.getElementById('rows').closest('section').scrollIntoView({behavior:'smooth'});return}
