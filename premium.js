@@ -8,19 +8,21 @@ const PLANS={
 };
 const hash=s=>crypto.createHash('sha256').update(String(s).trim().toUpperCase()).digest('hex');
 const nowIso=()=>new Date().toISOString();
+const lifetime=(scopeId,userId,product)=>({id:`owner-lifetime-${product}`,scope_id:String(scopeId),user_id:String(userId),product,starts_at:'2026-01-01T00:00:00.000Z',expires_at:'9999-12-31T23:59:59.999Z',complimentary:true});
 function bad(msg,status=400){const e=new Error(msg);e.status=status;throw e}
 function plan(product,billing){const p=PLANS[product],b=p?.[billing];if(!p||!b)bad('Offre Premium invalide.');return {...p,...b,product,billing};}
 function makeCode(product){return `VAL-${product==='multiserver'?'MULTI':'PASS'}-${crypto.randomBytes(9).toString('base64url').toUpperCase()}`;}
-async function active(scopeId,userId,product){
+async function active(scopeId,userId,product,owner=false){
+ if(owner)return lifetime(scopeId,userId,product);
  return db.prepare('SELECT * FROM premium_subscriptions WHERE scope_id=? AND user_id=? AND product=? AND expires_at>? ORDER BY expires_at DESC LIMIT 1').get(scopeId,userId,product,nowIso());
 }
-async function status(scopeId,userId){
+async function status(scopeId,userId,owner=false){
  const [multi,battle,servers]=await Promise.all([
-  active(scopeId,userId,'multiserver'),
-  active(scopeId,userId,'battlepass'),
+  active(scopeId,userId,'multiserver',owner),
+  active(scopeId,userId,'battlepass',owner),
   db.prepare('SELECT * FROM premium_servers WHERE scope_id=? ORDER BY created_at').all(scopeId)
  ]);
- return {paypalUrl:PAYPAL_URL,plans:PLANS,multiserver:multi||null,battlepass:battle||null,maxServers:multi?20:1,servers};
+ return {paypalUrl:PAYPAL_URL,plans:PLANS,multiserver:multi||null,battlepass:battle||null,maxServers:multi?20:1,servers,complimentary:Boolean(owner)};
 }
 async function requestPayment(scopeId,userId,product,billing){
  const p=plan(product,billing),id=crypto.randomUUID(),reference=`VAL-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
@@ -47,8 +49,8 @@ async function redeem(scopeId,userId,code){
  await db.prepare('UPDATE premium_codes SET used_by=?,used_scope=?,used_at=CURRENT_TIMESTAMP WHERE id=?').run(userId,scopeId,row.id);
  return {id,scope_id:scopeId,user_id:userId,product:row.product,expires_at:expires,maxServers:row.product==='multiserver'?20:0};
 }
-async function registerServer(scopeId,userId,label,serviceId){
- const multi=await active(scopeId,userId,'multiserver'),limit=multi?20:1,service=String(serviceId||'').trim();
+async function registerServer(scopeId,userId,label,serviceId,owner=false){
+ const multi=await active(scopeId,userId,'multiserver',owner),limit=multi?20:1,service=String(serviceId||'').trim();
  if(!/^\d{1,20}$/.test(service))bad('ID Nitrado invalide.');
  const existing=await db.prepare('SELECT * FROM premium_servers WHERE scope_id=? AND service_id=?').get(scopeId,service);
  if(existing){await db.prepare('UPDATE premium_servers SET label=? WHERE id=?').run(String(label||existing.label).trim().slice(0,100),existing.id);return {...existing,label:String(label||existing.label).trim().slice(0,100)};}
@@ -70,8 +72,9 @@ async function admin(){
 function scope(req){return req.session.role==='founder'?req.session.guildId:(req.session.selectedGuildId||req.session.guildId||'owner')}
 function user(req){return String(req.session.discordUserId||req.session.admin||'owner')}
 function mount(app,mustBeLoggedIn){
+ const isOwner=req=>req.session.role==='owner';
  app.get('/api/premium/plans',async(req,res)=>res.json({paypalUrl:PAYPAL_URL,plans:PLANS}));
- app.get('/api/premium',mustBeLoggedIn,async(req,res)=>res.json(await status(scope(req),user(req))));
+ app.get('/api/premium',mustBeLoggedIn,async(req,res)=>res.json(await status(scope(req),user(req),isOwner(req))));
  app.post('/api/premium/payment-request',mustBeLoggedIn,async(req,res)=>res.json(await requestPayment(scope(req),user(req),String(req.body.product||''),String(req.body.billing||''))));
  app.post('/api/premium/redeem',mustBeLoggedIn,async(req,res)=>res.json(await redeem(scope(req),user(req),String(req.body.code||''))));
  app.post('/api/premium/servers',mustBeLoggedIn,async(req,res)=>res.json(await registerServer(scope(req),user(req),req.body.label,req.body.serviceId)));
