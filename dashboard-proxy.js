@@ -34,7 +34,7 @@ function proxy(req,res){
 }
 
 app.get('/health',(req,res)=>res.json({ok:true,service:'dayz-gate-dashboard'}));
-app.use(['/api','/auth','/oauth','/callback'],proxy);
+app.use(['/api','/auth','/oauth','/callback','/dayz-gate-apple-180.jpg'],proxy);
 app.use(express.static(path.join(__dirname,'public'),{etag:true,maxAge:'5m'}));
 app.use((req,res,next)=>{
   if(req.method!=='GET'&&req.method!=='HEAD')return proxy(req,res);
