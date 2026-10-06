@@ -53,13 +53,24 @@ function mountMenu(authenticated=false){
 
 const SHARED_TOP_SERVERS_API='https://bot-ark-production.up.railway.app/api/top-servers';
 async function showSharedTopServers(main){
- const notice=document.createElement('section');notice.className='gate-menu-notice';notice.innerHTML='<h2>🏆 TOP SERVEURS</h2><p>Classement commun à DAYZ GATE, BOT ARK et EXTINCTION ++ RSS.</p><div id="shared-top-servers">Chargement…</div>';main.querySelector('.title').after(notice);
+ const me=await api('/api/me').catch(()=>({}));const notice=document.createElement('section');notice.className='gate-menu-notice';notice.innerHTML='<h2>🏆 TOP SERVEURS</h2><p>Classement commun à DAYZ GATE, BOT ARK et EXTINCTION ++ RSS.</p>'+(me.role==='owner'?'<p><button class="reference-red" onclick="addSharedTopServerGate()">+ Ajouter un serveur</button></p>':'')+'<div id="shared-top-servers">Chargement…</div>';main.querySelector('.title').after(notice);
  try{const r=await fetch(SHARED_TOP_SERVERS_API,{cache:'no-store'}),rows=await r.json();if(!r.ok)throw Error();document.getElementById('shared-top-servers').innerHTML=rows.length?rows.map((s,i)=>`<article class="reference-box" style="margin-top:10px"><h3>#${i+1} — ${esc(s.name)}</h3><p>${esc(s.game)} · ${esc(s.address||'Adresse non publiée')}</p><p><b>${s.votes_24h}</b> votes / 24h · ${s.votes} total</p><button class="reference-red" onclick="voteSharedTopServer('${esc(s.id)}')">Voter</button>${s.discord_url?` <a class="smallbtn" href="${esc(s.discord_url)}" target="_blank" rel="noopener">Discord ↗</a>`:''}</article>`).join(''):'<p>Aucun serveur inscrit.</p>';}catch{document.getElementById('shared-top-servers').textContent='Classement temporairement indisponible.';}
 }
 async function voteSharedTopServer(id){
  const r=await fetch(SHARED_TOP_SERVERS_API+'/'+encodeURIComponent(id)+'/vote',{method:'POST'}),d=await r.json().catch(()=>({}));if(!r.ok)return alert(d.error||'Vote impossible');alert(d.accepted?'Vote enregistré.':'Tu as déjà voté aujourd’hui.');openMenuPage('topservers','Top Serveurs',true);
 }
-window.voteSharedTopServer=voteSharedTopServer;
+async function addSharedTopServerGate(){
+ const name=prompt('Nom du serveur :');if(!name)return;
+ const game=prompt('Jeu :','DayZ')||'DayZ';
+ const address=prompt('Adresse / IP :','')||'';
+ const discord_url=prompt('Lien Discord :','')||'';
+ const website=prompt('Site web :','')||'';
+ const image_url=prompt('Image :','')||'';
+ const description=prompt('Description :','')||'';
+ await api('/api/top-servers/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,game,address,discord_url,website,image_url,description})});
+ alert('Serveur ajouté au Top Serveurs.');openMenuPage('topservers','Top Serveurs',true);
+}
+window.voteSharedTopServer=voteSharedTopServer;window.addSharedTopServerGate=addSharedTopServerGate;
 
 
 async function showPremiumGate(main){
@@ -75,14 +86,15 @@ async function showPremiumGate(main){
     ${d.complimentary?'':`<section class="reference-box"><h3>Activation</h3><p><input id="premium-code" placeholder="Code d’activation"><button class="reference-red" onclick="premiumRedeemGate()">Activer</button></p><p><a class="reference-red" href="${esc(d.paypalUrl)}" target="_blank" rel="noopener">Payer avec PayPal ↗</a></p></section>`}
    </div>
    <section class="reference-box" style="margin-top:14px"><h3>Serveurs enregistrés — ${d.unlimitedServers?d.servers.length+' / illimité':d.servers.length+'/'+d.maxServers}</h3>${d.servers.map(s=>`<p><b>${esc(s.label)}</b> · Nitrado #${esc(s.service_id)} <button class="smallbtn red" onclick="premiumRemoveServerGate('${esc(s.id)}')">Supprimer</button></p>`).join('')||'<p>Aucun serveur enregistré.</p>'}</section>
-   ${admin?`<section class="reference-box" style="margin-top:14px"><h3>Validation propriétaire</h3><p>PayPal.me ne confirme pas automatiquement le paiement au bot : vérifie la référence puis génère le code.</p>${(admin.requests||[]).filter(x=>x.status==='pending').map(r=>`<p><b>${esc(r.reference)}</b> · ${esc(r.product)} · ${esc(r.billing)} · ${(Number(r.amount_cents)/100).toFixed(2)} € <button class="reference-red" onclick="premiumApproveGate('${esc(r.id)}')">Paiement vérifié → code</button></p>`).join('')||'<p>Aucune demande en attente.</p>'}</section>`:''}`;
+   ${admin?`<section class="reference-box" style="margin-top:14px"><h3>Administration Premium</h3><p>Génère aussi un code manuellement, comme sur EXTINCTION ++ RSS.</p><p><button class="smallbtn" onclick="premiumGenerateGate('multiserver','monthly')">Code Multi 1 mois</button> <button class="smallbtn" onclick="premiumGenerateGate('multiserver','yearly')">Code Multi 1 an</button> <button class="smallbtn" onclick="premiumGenerateGate('battlepass','monthly')">Code Pass 1 mois</button> <button class="smallbtn" onclick="premiumGenerateGate('battlepass','yearly')">Code Pass 1 an</button></p><h3>Validation paiements</h3><p>PayPal.me ne confirme pas automatiquement le paiement au bot : vérifie la référence puis génère le code.</p>${(admin.requests||[]).filter(x=>x.status==='pending').map(r=>`<p><b>${esc(r.reference)}</b> · ${esc(r.product)} · ${esc(r.billing)} · ${(Number(r.amount_cents)/100).toFixed(2)} € <button class="reference-red" onclick="premiumApproveGate('${esc(r.id)}')">Paiement vérifié → code</button></p>`).join('')||'<p>Aucune demande en attente.</p>'}</section>`:''}`;
  }catch(e){document.getElementById('gate-premium').textContent=e.message||'Premium indisponible.'}
 }
 async function premiumBuyGate(product,billing){const r=await api('/api/premium/payment-request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({product,billing})});alert('Référence PayPal : '+r.reference+'\nMontant : '+r.amount+'\nAjoute cette référence dans la note du paiement.');window.open(r.paypalUrl,'_blank','noopener')}
 async function premiumRedeemGate(){const code=document.getElementById('premium-code')?.value||'';await api('/api/premium/redeem',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});alert('Premium activé.');openMenuPage('premium','Premium',true)}
 async function premiumRemoveServerGate(id){await api('/api/premium/servers/'+encodeURIComponent(id),{method:'DELETE'});openMenuPage('premium','Premium',true)}
 async function premiumApproveGate(id){const r=await api('/api/premium/admin/approve/'+encodeURIComponent(id),{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});prompt('Code à transmettre au client :',r.code);openMenuPage('premium','Premium',true)}
-Object.assign(window,{premiumBuyGate,premiumRedeemGate,premiumRemoveServerGate,premiumApproveGate});
+async function premiumGenerateGate(product,billing){const r=await api('/api/premium/admin/code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({product,billing})});prompt('Code Premium généré :',r.code);}
+Object.assign(window,{premiumBuyGate,premiumRedeemGate,premiumRemoveServerGate,premiumApproveGate,premiumGenerateGate});
 
 async function showRadioGate(main){
  const notice=document.createElement('section');notice.className='gate-menu-notice';notice.innerHTML='<h2>📻 DAYZ GATE RADIO</h2><p>Messages RP, annonces serveur et rappels récurrents.</p><div id="gate-radio">Chargement…</div>';main.querySelector('.title').after(notice);
@@ -97,6 +109,16 @@ async function sendRadioGate(){await api('/api/radio/send',{method:'POST',header
 async function recurringRadioGate(){await api('/api/radio/recurring',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({channelId:document.getElementById('radio-rec-channel').value,message:document.getElementById('radio-rec-message').value,intervalMinutes:Number(document.getElementById('radio-rec-minutes').value)})});openMenuPage('radio','Radio',true)}
 Object.assign(window,{saveRadioGate,sendRadioGate,recurringRadioGate});
 
+function showToolsGate(main){
+ const notice=document.createElement('section');notice.className='gate-menu-notice';notice.innerHTML=`<h2>🛠 Outils DayZ Gate</h2><p>Les outils ci-dessous sont actifs.</p><div class="reference-panels" style="margin-top:14px">
+ <section class="reference-box"><h3>🏆 Top Serveurs</h3><p>Classement partagé, votes et ajout par le propriétaire.</p><button class="reference-red" onclick="openMenuPage('topservers','Top Serveurs',true)">Ouvrir</button></section>
+ <section class="reference-box"><h3>★ Premium</h3><p>Abonnements, serveurs, codes d’activation et validation propriétaire.</p><button class="reference-red" onclick="openMenuPage('premium','Premium',true)">Ouvrir</button></section>
+ <section class="reference-box"><h3>📻 Radio</h3><p>Annonces, diffusion et rappels récurrents.</p><button class="reference-red" onclick="openMenuPage('radio','Radio',true)">Ouvrir</button></section>
+ <section class="reference-box"><h3>☁ Nitrado</h3><p>Connexion et sélection du serveur DayZ.</p><button class="reference-red" onclick="window.openGateHelp&&window.openGateHelp('settings')">Configurer</button></section>
+ <section class="reference-box"><h3>✦ Aide & IA</h3><p>Explique Whitelist, Premium, Top Serveurs, Radio, Nitrado et installation.</p><button class="reference-red" onclick="window.openGateHelp&&window.openGateHelp('ai')">Ouvrir l’IA</button></section>
+ <section class="reference-box"><h3>✓ Whitelist</h3><p>Demandes joueurs, validation admin et rôle Discord.</p><button class="reference-red" onclick="openMenuPage('requests','Demandes',true)">Ouvrir</button></section>
+ </div>`;main.querySelector('.title').after(notice);
+}
 function openMenuPage(key,label,authenticated){
  document.querySelector('.gate-menu-notice')?.remove();
  if(!authenticated){if(key==='home'){window.scrollTo({top:0,behavior:'smooth'});return}showLogin(label);return}
@@ -104,6 +126,7 @@ function openMenuPage(key,label,authenticated){
  if(key==='premium'){showPremiumGate(main);return}
  if(key==='radio'){showRadioGate(main);return}
  if(key==='topservers'){showSharedTopServers(main);return}
+ if(key==='tools'){showToolsGate(main);return}
  if(key==='partners'){main.insertAdjacentHTML('afterbegin','<section class="gate-menu-notice"><h2>INTERPOL · PARTENARIATS OFFICIELS</h2><p><strong>EXTINCTION ++ RSS</strong> ↔ <strong>DAYZ GATE</strong> ↔ <strong>BOT ARK</strong></p><p>Réseau commun Valhalla Extinction : actualités, outils serveurs, communautés et services connectés.</p></section>');return}
  main.querySelector('.title').textContent=label;
  if(['home','requests','players','shield'].includes(key)){loadRows(document.getElementById('search').value);document.getElementById('rows').closest('section').querySelector('h2').textContent=window.approvedOnly?'Joueurs whitelistés':'Demandes récentes';document.getElementById('rows').closest('section').scrollIntoView({behavior:'smooth'});return}
@@ -135,3 +158,10 @@ function renderWelcomeDashboard(){
 }
 
 const languageScript=document.createElement("script");languageScript.src="/i18n.js";document.head.appendChild(languageScript);
+
+const gatePolish=document.createElement('style');gatePolish.textContent=`
+@keyframes dayzBackgroundDrift{0%{background-position:center center}50%{background-position:53% 46%}100%{background-position:center center}}
+body{animation:dayzBackgroundDrift 34s ease-in-out infinite;background-size:auto,112% 112%!important;background-attachment:fixed}
+@media(max-width:800px){.shell,.main{padding-top:calc(132px + env(safe-area-inset-top,0px))!important}.gate-toggle{top:calc(12px + env(safe-area-inset-top,0px))}.reference-top{position:absolute;top:calc(72px + env(safe-area-inset-top,0px));left:14px;right:14px;height:48px!important;display:flex!important;align-items:center!important;gap:8px!important}.reference-top .reference-search{display:none}.reference-account{flex:1;justify-content:center;min-height:46px}.gate-language{min-height:46px!important}.gate-side{padding-top:calc(54px + env(safe-area-inset-top,0px))!important}}
+@media(prefers-reduced-motion:reduce){body{animation:none}}
+`;document.head.appendChild(gatePolish);
