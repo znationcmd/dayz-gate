@@ -9,6 +9,7 @@ const nitrado = require("./nitrado");
 const founders=require("./founders");
 const radio=require('./radio');
 const premium=require('./premium');
+const topServers=require('./top-servers');
 const {client}=require("./bot");
 
 function buildDashboard() {
@@ -65,6 +66,7 @@ function buildDashboard() {
   founders.mount(app,mustBeLoggedIn,client);
   radio.mount(app,mustBeLoggedIn);
   premium.mount(app,mustBeLoggedIn);
+  app.post('/api/top-servers/register',mustBeLoggedIn,async(req,res)=>{if(req.session.role!=='owner')return res.status(403).json({error:'Réservé au propriétaire'});res.json(await topServers.register({...req.body,source_bot:'DAYZ GATE'}));});
   app.post('/api/login',async (req,res)=>{
     const key=req.ip;const now=Date.now();const tries=loginAttempts.get(key)||{count:0,time:now};if(now-tries.time>900000){tries.count=0;tries.time=now}if(tries.count>=10)return res.status(429).json({error:'Réessaie dans 15 minutes'});tries.count++;loginAttempts.set(key,tries);
     const {username,password}=req.body;if(typeof username!=='string'||typeof password!=='string'||password.length>128)return res.status(401).json({error:'Identifiants incorrects'});
