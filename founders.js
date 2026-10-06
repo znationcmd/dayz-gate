@@ -11,7 +11,7 @@ class Store extends session.Store{
  async destroy(sid,cb){try{(await db.prepare('DELETE FROM dashboard_sessions WHERE sid=?').run(sid));cb?.()}catch(e){cb?.(e)}}
  touch(sid,data,cb){this.set(sid,data,cb)}
 }
-function canAccess(req,row){return req.session.role!=='founder'||row.server_name.startsWith(req.session.guildId+':')}
+function canAccess(req,row){const id=req.session.selectedGuildId||req.session.guildId;return req.session.role!=='founder'||Boolean(id&&row.server_name.startsWith(id+':'))}
 function mount(app,mustLogin,client){
  const owner=(req,res,next)=>{if(req.session.role==='founder')return res.status(403).json({error:'Réservé au propriétaire DayZ Gate'});next()};
  app.post('/api/founder/discord-login',async (req,res)=>{
@@ -23,13 +23,25 @@ function mount(app,mustLogin,client){
   }catch{return res.status(403).json({error:'Impossible de vérifier tes droits Discord. Relance /dashboard.'})}
  });
  app.post('/api/founder/choose',mustLogin,owner,async (req,res)=>{const id=String(req.body.guildId||'');if(!client.guilds.cache.has(id))return res.status(400).json({error:'Discord inconnu'});req.session.selectedGuildId=id;res.json({ok:true})});
- app.get('/api/founder/guilds'  ,mustLogin,async (req,res)=>{let guilds=[...client.guilds.cache.values()].map(g=>({id:g.id,name:g.name}));if(req.session.role==='founder')guilds=guilds.filter(g=>g.id===req.session.guildId);res.json(guilds)});
+ app.get('/api/founder/guilds',mustLogin,async (req,res)=>{
+  let guilds=[...client.guilds.cache.values()].map(g=>({id:g.id,name:g.name}));
+  if(req.session.role==='founder'){
+    if(req.session.authMethod==='discord'&&req.session.discordUserId){
+      const allowed=[];
+      for(const g of guilds){
+        try{const guild=await client.guilds.fetch(g.id);const member=await guild.members.fetch(req.session.discordUserId);if(guild.ownerId===req.session.discordUserId||member.permissions.has(32n)||member.permissions.has(8n))allowed.push(g)}catch{}
+      }
+      guilds=allowed;
+    }else guilds=guilds.filter(g=>g.id===(req.session.selectedGuildId||req.session.guildId));
+  }
+  res.json(guilds);
+});
  app.post('/api/founder/invites',mustLogin,owner,async (req,res)=>{const guildId=String(req.body.guildId||'');if(!client.guilds.cache.has(guildId))return res.status(400).json({error:'Le bot doit être présent dans ce Discord'});const token=crypto.randomBytes(32).toString('base64url');(await db.prepare('INSERT INTO founder_invites VALUES(?,?,?,0)').run(tokenHash(token),guildId,Date.now()+48*3600000));res.json({token,expiresInHours:48})});
  app.post('/api/founder/register',async (req,res)=>{const {token,username,password}=req.body;if(!token||typeof username!=='string'||typeof password!=='string'||!/^[-\w.]{3,40}$/.test(username)||password.length<12||password.length>128)return res.status(400).json({error:'Identifiant de 3 à 40 caractères et mot de passe de 12 à 128 caractères requis'});try{await db.transaction(async ()=>{const invite=(await db.prepare('SELECT * FROM founder_invites WHERE token_hash=? AND used=0 AND expires_at>?').get(tokenHash(String(token)),Date.now()));if(!invite)throw Error('Invitation expirée ou déjà utilisée');if((await db.prepare('SELECT id FROM founder_accounts WHERE username=?').get(username))||username===process.env.DASHBOARD_USER)throw Error('Identifiant déjà utilisé');(await db.prepare('INSERT INTO founder_accounts(username,guild_id,password_hash) VALUES(?,?,?)').run(username,invite.guild_id,hashPassword(password)));if(!(await db.prepare('UPDATE founder_invites SET used=1 WHERE token_hash=? AND used=0').run(invite.token_hash)).changes)throw Error('Invitation déjà utilisée')});res.json({ok:true})}catch(e){res.status(400).json({error:e.message})}});
  app.get('/api/founder/accounts',mustLogin,owner,async (req,res)=>res.json((await db.prepare('SELECT id,username,guild_id,active FROM founder_accounts').all())));
  app.post('/api/founder/accounts/:id/disable',mustLogin,owner,async (req,res)=>{(await db.prepare('UPDATE founder_accounts SET active=0 WHERE id=?').run(req.params.id));res.json({ok:true})});
- app.get('/api/founder/settings',mustLogin,async (req,res)=>{const id=req.session.role==='founder'?req.session.guildId:String(req.query.guildId||'');res.json((await db.prepare('SELECT * FROM guild_settings WHERE guild_id=?').get(id))||{guild_id:id,whitelist_role_id:''})});
- app.post('/api/founder/settings',mustLogin,async (req,res)=>{const id=req.session.role==='founder'?req.session.guildId:String(req.body.guildId||'');const roleId=String(req.body.roleId||'');try{const guild=await client.guilds.fetch(id);if(roleId){const role=await guild.roles.fetch(roleId);if(!role||role.id===guild.id||role.managed)throw Error('Choisis un rôle Discord valide pour la whitelist')}(await db.prepare('INSERT INTO guild_settings VALUES(?,?) ON CONFLICT(guild_id) DO UPDATE SET whitelist_role_id=excluded.whitelist_role_id').run(id,roleId));res.json({ok:true})}catch(e){res.status(400).json({error:e.message})}});
+ app.get('/api/founder/settings',mustLogin,async (req,res)=>{const id=req.session.role==='founder'?(req.session.selectedGuildId||req.session.guildId):String(req.query.guildId||'');res.json((await db.prepare('SELECT * FROM guild_settings WHERE guild_id=?').get(id))||{guild_id:id,whitelist_role_id:''})});
+ app.post('/api/founder/settings',mustLogin,async (req,res)=>{const id=req.session.role==='founder'?(req.session.selectedGuildId||req.session.guildId):String(req.body.guildId||'');const roleId=String(req.body.roleId||'');try{const guild=await client.guilds.fetch(id);if(roleId){const role=await guild.roles.fetch(roleId);if(!role||role.id===guild.id||role.managed)throw Error('Choisis un rôle Discord valide pour la whitelist')}(await db.prepare('INSERT INTO guild_settings VALUES(?,?) ON CONFLICT(guild_id) DO UPDATE SET whitelist_role_id=excluded.whitelist_role_id').run(id,roleId));res.json({ok:true})}catch(e){res.status(400).json({error:e.message})}});
 }
 module.exports={Store,verifyPassword,canAccess,mount};
 
