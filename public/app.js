@@ -32,8 +32,8 @@ async function logout(){await fetch("/api/logout",{method:"POST"});location.relo
 fetch("/api/me").then(r=>r.json()).then(m=>{if(m.loggedIn)renderAdmin()});
 
 // Shared navigation, including the welcome screen and the installed application.
-const menuItems=[['Dashboard','home'],['Premium','premium'],['Top Serveurs','topservers'],['Demandes','requests'],['Joueurs','players'],['Whitelist','shield'],['Serveurs','servers'],['Radio','radio'],['Cartes','map'],['Mods','mods'],['Outils','tools'],['Validateur','validator'],['Logs','logs'],['Statistiques','stats'],['Configuration','settings'],['Partenariats','partners']];
-const iconPaths={premium:'M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z',radio:'M4 10a8 8 0 0 1 16 0M7 10a5 5 0 0 1 10 0M10 10a2 2 0 0 1 4 0M12 12v9',home:'M3 10 12 3l9 7M5 9v12h5v-7h4v7h5V9',topservers:'M3 20h18M5 20v-4h14v4M7 16l2-7h6l2 7M9 5h6M12 3v2',requests:'M8 3h8v3H8zM8 4H5v17h14V4h-3M8 11h8M8 16h8',players:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9M16 3a4 4 0 0 1 0 8',shield:'M12 3 3 7v6c0 5 9 9 9 9s9-4 9-9V7zM8 12l3 3 5-6',servers:'M3 3h18v7H3zM3 14h18v7H3zM6 6h1M6 17h1M15 6h3M15 17h3',map:'m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3zM9 3v15M15 6v15',mods:'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',tools:'M14 6a6 6 0 0 0-7 7L2 18l4 4 5-5a6 6 0 0 0 7-7l-4 4-4-4z',logs:'M4 2h11l5 5v15H4zM14 2v6h6M8 12h8M8 16h8',stats:'M4 21V13h3v8M11 21V8h3v13M18 21V3h3v18',settings:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8M9 3h6l1 3 3 1 2 5-2 4-3 1-1 4H9l-1-4-3-1-2-4 2-5 3-1z',partners:'M8 12h8M12 8v8M5 5h14v14H5z'};
+const menuItems=[['Dashboard','home'],['Premium','premium'],['Top Serveurs','topservers'],['Demandes','requests'],['Joueurs','players'],['Whitelist','shield'],['Serveurs','servers'],['Banque','bank'],['RP','rp'],['Shop','shop'],['Tickets','tickets'],['Loterie','lottery'],['Mini-jeux','minigames'],['Radio','radio'],['Cartes','map'],['Mods','mods'],['Outils','tools'],['Validateur','validator'],['Logs','logs'],['Statistiques','stats'],['Configuration','settings'],['Partenariats','partners']];
+const iconPaths={premium:'M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z',radio:'M4 10a8 8 0 0 1 16 0M7 10a5 5 0 0 1 10 0M10 10a2 2 0 0 1 4 0M12 12v9',home:'M3 10 12 3l9 7M5 9v12h5v-7h4v7h5V9',topservers:'M3 20h18M5 20v-4h14v4M7 16l2-7h6l2 7M9 5h6M12 3v2',requests:'M8 3h8v3H8zM8 4H5v17h14V4h-3M8 11h8M8 16h8',players:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9M16 3a4 4 0 0 1 0 8',shield:'M12 3 3 7v6c0 5 9 9 9 9s9-4 9-9V7zM8 12l3 3 5-6',servers:'M3 3h18v7H3zM3 14h18v7H3zM6 6h1M6 17h1M15 6h3M15 17h3',map:'m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3zM9 3v15M15 6v15',mods:'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',tools:'M14 6a6 6 0 0 0-7 7L2 18l4 4 5-5a6 6 0 0 0 7-7l-4 4-4-4z',logs:'M4 2h11l5 5v15H4zM14 2v6h6M8 12h8M8 16h8',stats:'M4 21V13h3v8M11 21V8h3v13M18 21V3h3v18',settings:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8M9 3h6l1 3 3 1 2 5-2 4-3 1-1 4H9l-1-4-3-1-2-4 2-5 3-1z',partners:'M8 12h8M12 8v8M5 5h14v14H5z',bank:'M4 10h16M5 10v8M9 10v8M15 10v8M19 10v8M3 18h18M12 3 3 8h18z',rp:'M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8M4 21a8 8 0 0 1 16 0',shop:'M4 7h16l-1 13H5L4 7M8 7a4 4 0 0 1 8 0',tickets:'M3 8a2 2 0 0 0 0 4v5h18v-5a2 2 0 0 0 0-4V3H3zM12 7v6',lottery:'M12 2v20M2 12h20M5 5l14 14M19 5 5 19',minigames:'M8 8h8a5 5 0 0 1 5 5v3a3 3 0 0 1-5 2l-2-2H10l-2 2a3 3 0 0 1-5-2v-3a5 5 0 0 1 5-5z'};
 function menuIcon(key){return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${iconPaths[key]}"/></svg>`}
 function mountMenu(authenticated=false){
  document.querySelector('.side')?.remove();document.querySelector('.mobileNav')?.remove();document.querySelector('.nav')?.remove();
@@ -149,6 +149,69 @@ function downloadCorrectedDayzGate(){
 }
 Object.assign(window,{runFileValidatorGate,downloadCorrectedDayzGate});
 
+
+async function showCommunityGate(main,key){
+ const me=await api('/api/me').catch(()=>({})),d=await api('/api/community');
+ const owner=me.role==='owner';
+ const n=x=>new Intl.NumberFormat('fr-FR').format(Number(x)||0);
+ const notice=document.createElement('section');notice.className='gate-menu-notice';
+ const tx=(d.wallet?.transactions||[]).slice(0,10).map(x=>'<p><b>'+esc(x.kind)+'</b> · '+(Number(x.amount)>=0?'+':'')+n(x.amount)+' · '+esc(x.created_at||'')+'</p>').join('')||'<p>Aucun mouvement.</p>';
+ if(key==='bank')notice.innerHTML='<h2>🏦 Banque & monnaie</h2><p>Solde : <b>'+n(d.wallet?.balance)+' crédits</b></p><section class="reference-box"><h3>Payer un joueur</h3><input id="bank-user" placeholder="ID Discord du joueur"><input id="bank-amount" type="number" min="1" placeholder="Montant"><button class="reference-red" onclick="communityPayGate()">Envoyer</button></section>'+(owner?'<section class="reference-box" style="margin-top:12px"><h3>Crédit propriétaire</h3><input id="credit-user" placeholder="ID Discord (vide = toi)"><input id="credit-amount" type="number" min="1" placeholder="Montant"><button class="reference-red" onclick="communityCreditGate()">Ajouter</button></section>':'')+'<section class="reference-box" style="margin-top:12px"><h3>Historique</h3>'+tx+'</section>';
+ if(key==='rp'){const p=d.profile||{};notice.innerHTML='<h2>🎭 Profil RP</h2><section class="reference-box"><input id="rp-job" value="'+esc(p.job||'Survivant')+'" placeholder="Métier"><input id="rp-faction" value="'+esc(p.faction||'')+'" placeholder="Faction"><textarea id="rp-bio" placeholder="Bio RP">'+esc(p.bio||'')+'</textarea><button class="reference-red" onclick="saveRpGate()">Enregistrer le profil</button></section>';}
+ if(key==='shop'){const items=(d.shop||[]).map(x=>'<article class="reference-box" style="margin-top:10px"><h3>'+esc(x.name)+'</h3><p>'+esc(x.description||'')+'</p><p><b>'+n(x.price)+' crédits</b></p><button class="reference-red" onclick="buyShopGate(\''+esc(x.id)+'\')">Acheter</button></article>').join('')||'<p>Boutique vide.</p>';notice.innerHTML='<h2>🛒 Shop communautaire</h2>'+(owner?'<section class="reference-box"><h3>Créer un article</h3><input id="shop-name" placeholder="Nom"><input id="shop-price" type="number" min="0" placeholder="Prix"><input id="shop-desc" placeholder="Description"><button class="reference-red" onclick="createShopGate()">Créer</button></section>':'')+'<div>'+items+'</div>';}
+ if(key==='tickets'){const rows=(d.tickets||[]).map(x=>'<p><b>'+esc(x.subject)+'</b> · '+esc(x.status)+' · '+esc(x.id)+(x.status==='open'?' <button class="smallbtn red" onclick="closeTicketGate(\''+esc(x.id)+'\')">Fermer</button>':'')+'</p>').join('')||'<p>Aucun ticket.</p>';notice.innerHTML='<h2>🎫 Tickets</h2><section class="reference-box"><input id="ticket-subject" placeholder="Sujet du ticket"><button class="reference-red" onclick="openTicketGate()">Ouvrir un ticket</button></section><section class="reference-box" style="margin-top:12px"><h3>Mes tickets</h3>'+rows+'</section>';}
+ if(key==='lottery'){const l=d.lottery||{};notice.innerHTML='<h2>🎟️ Loterie</h2><p>Cagnotte : <b>'+n(l.pot)+' crédits</b> · '+n(l.tickets)+' tickets · tes tickets : '+n(l.mine)+'</p><section class="reference-box"><input id="lottery-count" type="number" min="1" max="10" value="1"><button class="reference-red" onclick="buyLotteryGate()">Acheter (100 crédits/ticket)</button>'+(owner?' <button class="smallbtn" onclick="drawLotteryGate()">Tirer le gagnant</button>':'')+'</section>';}
+ if(key==='minigames'){notice.innerHTML='<h2>🎮 Mini-jeux</h2><p>Jeux gratuits avec récompenses en crédits virtuels.</p><section class="reference-box"><select id="minigame-name"><option value="chifoumi">Chifoumi</option><option value="de">Dé</option><option value="devinette">Devinette DayZ</option></select><input id="minigame-choice" placeholder="pierre / feuille / ciseaux, 1-6 ou réponse"><button class="reference-red" onclick="playMinigameGate()">Jouer</button><div id="minigame-result"></div></section>';}
+ main.querySelector('.title').after(notice);
+}
+async function communityPayGate(){await api('/api/community/pay',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userId:document.getElementById('bank-user').value,amount:Number(document.getElementById('bank-amount').value)})});alert('Paiement envoyé.');openMenuPage('bank','Banque',true)}
+async function communityCreditGate(){await api('/api/community/credit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({userId:document.getElementById('credit-user').value,amount:Number(document.getElementById('credit-amount').value)})});alert('Crédits ajoutés.');openMenuPage('bank','Banque',true)}
+async function saveRpGate(){await api('/api/community/rp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({job:document.getElementById('rp-job').value,faction:document.getElementById('rp-faction').value,bio:document.getElementById('rp-bio').value})});alert('Profil RP enregistré.');openMenuPage('rp','RP',true)}
+async function createShopGate(){await api('/api/community/shop',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:document.getElementById('shop-name').value,price:Number(document.getElementById('shop-price').value),description:document.getElementById('shop-desc').value})});openMenuPage('shop','Shop',true)}
+async function buyShopGate(id){await api('/api/community/shop/'+encodeURIComponent(id)+'/buy',{method:'POST'});alert('Achat enregistré.');openMenuPage('shop','Shop',true)}
+async function openTicketGate(){await api('/api/community/ticket',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subject:document.getElementById('ticket-subject').value})});openMenuPage('tickets','Tickets',true)}
+async function closeTicketGate(id){await api('/api/community/ticket/'+encodeURIComponent(id)+'/close',{method:'POST'});openMenuPage('tickets','Tickets',true)}
+async function buyLotteryGate(){await api('/api/community/lottery/buy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({count:Number(document.getElementById('lottery-count').value)})});openMenuPage('lottery','Loterie',true)}
+async function drawLotteryGate(){const r=await api('/api/community/lottery/draw',{method:'POST'});alert('Gagnant : '+r.winnerId+' · '+r.prize+' crédits');openMenuPage('lottery','Loterie',true)}
+async function playMinigameGate(){const r=await api('/api/community/minigame',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({game:document.getElementById('minigame-name').value,choice:document.getElementById('minigame-choice').value})});document.getElementById('minigame-result').textContent=r.needsChoice?r.prompt:(r.text+(r.reward?' · +'+r.reward+' crédits':''));}
+Object.assign(window,{communityPayGate,communityCreditGate,saveRpGate,createShopGate,buyShopGate,openTicketGate,closeTicketGate,buyLotteryGate,drawLotteryGate,playMinigameGate});
+
+async function showServersGate(main){
+ const notice=document.createElement('section');notice.className='gate-menu-notice';notice.innerHTML='<h2>🖥️ Serveurs DayZ</h2><div id="servers-gate">Chargement…</div>';main.querySelector('.title').after(notice);
+ try{const s=await api('/api/nitrado/status');let html='<section class="reference-box"><h3>Nitrado</h3><p>'+(s.connected?'✅ Connecté':'❌ Non connecté')+'</p>'+(s.connected?'<button class="smallbtn red" onclick="disconnectNitradoGate()">Déconnecter</button>':'<button class="reference-red" onclick="location.href=\'/auth/nitrado/start\'">Connecter Nitrado</button>')+'</section>';if(s.connected){const rows=await api('/api/nitrado/services');html+='<section class="reference-box" style="margin-top:12px"><h3>Services</h3>'+rows.map(x=>'<p><b>'+esc(x.label)+'</b> · #'+esc(x.id)+' · '+esc(x.status||'')+' <button class="smallbtn" onclick="selectNitradoGate(\''+esc(x.id)+'\',\''+esc(x.label).replace(/'/g,'&#39;')+'\')">Sélectionner</button></p>').join('')+'</section>';}document.getElementById('servers-gate').innerHTML=html;}catch(e){document.getElementById('servers-gate').textContent=e.message}
+}
+async function selectNitradoGate(id,label){const whitelistFile=prompt('Chemin whitelist.txt DayZ PC (optionnel) :','')||'';await api('/api/nitrado/select',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({serviceId:id,serviceLabel:label,whitelistFile})});alert('Serveur sélectionné.');openMenuPage('servers','Serveurs',true)}
+async function disconnectNitradoGate(){await api('/api/nitrado/disconnect',{method:'POST'});openMenuPage('servers','Serveurs',true)}
+
+async function showModsGate(main){
+ const notice=document.createElement('section');notice.className='gate-menu-notice';notice.innerHTML='<h2>🧩 Mods DayZ</h2><section class="reference-box"><input id="mod-workshop" placeholder="Workshop ID Steam"><input id="mod-name" placeholder="Nom du mod"><input id="mod-notes" placeholder="Notes"><button class="reference-red" onclick="addModGate()">Ajouter / mettre à jour</button></section><div id="mods-list"></div>';main.querySelector('.title').after(notice);
+ const rows=await api('/api/mods');document.getElementById('mods-list').innerHTML=rows.map(x=>'<section class="reference-box" style="margin-top:10px"><h3>'+esc(x.name)+'</h3><p>Workshop : '+esc(x.workshop_id)+(x.notes?' · '+esc(x.notes):'')+'</p><button class="smallbtn red" onclick="removeModGate(\''+esc(x.id)+'\')">Supprimer de la liste</button></section>').join('')||'<p>Aucun mod enregistré.</p>';
+}
+async function addModGate(){await api('/api/mods',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({workshopId:document.getElementById('mod-workshop').value,name:document.getElementById('mod-name').value,notes:document.getElementById('mod-notes').value})});openMenuPage('mods','Mods',true)}
+async function removeModGate(id){await api('/api/mods/'+encodeURIComponent(id),{method:'DELETE'});openMenuPage('mods','Mods',true)}
+
+async function showLogsGate(main){
+ const notice=document.createElement('section');notice.className='gate-menu-notice';notice.innerHTML='<h2>📄 Logs DayZ</h2><div id="logs-gate">Chargement…</div>';main.querySelector('.title').after(notice);
+ const d=await api('/api/logs?limit=200'),fmt=x=>[x.occurred_at||x.log_time,x.event_type,x.player_name,x.killer_name,x.weapon,x.object_name,(x.x!=null&&x.z!=null)?'X '+x.x+' Z '+x.z:''].filter(Boolean).map(esc).join(' · ');
+ document.getElementById('logs-gate').innerHTML='<section class="reference-box"><h3>Activité</h3>'+(d.activity.length?d.activity.map(x=>'<p>'+fmt(x)+'</p>').join(''):'<p>Aucun log activité importé.</p>')+'</section><section class="reference-box" style="margin-top:12px"><h3>Constructions</h3>'+(d.construction.length?d.construction.map(x=>'<p>'+fmt(x)+'</p>').join(''):'<p>Aucun log construction importé.</p>')+'</section>';
+}
+async function showStatsGate(main){
+ const [s,c]=await Promise.all([api('/api/stats'),api('/api/community')]),notice=document.createElement('section');notice.className='gate-menu-notice';notice.innerHTML='<h2>📊 Statistiques</h2><div class="reference-stats"><div><b>'+s.approved+'</b><span>Whitelistés</span></div><div><b>'+s.pending+'</b><span>En attente</span></div><div><b>'+s.rejected+'</b><span>Refusés</span></div><div><b>'+c.wallet.balance+'</b><span>Crédits personnels</span></div></div>';main.querySelector('.title').after(notice);
+}
+async function showSettingsGate(main){
+ const [s,n]=await Promise.all([api('/api/community-settings'),api('/api/nitrado/status').catch(()=>({connected:false}))]),notice=document.createElement('section');notice.className='gate-menu-notice';notice.innerHTML='<h2>⚙️ Configuration</h2><section class="reference-box"><h3>Rôle whitelist Discord</h3><input id="settings-role" value="'+esc(s.whitelist_role_id||'')+'" placeholder="ID rôle Discord"><button class="reference-red" onclick="saveSettingsGate()">Enregistrer</button></section><section class="reference-box" style="margin-top:12px"><h3>Nitrado</h3><p>'+(n.connected?'✅ Compte connecté':'❌ Non connecté')+'</p><button class="reference-red" onclick="openMenuPage(\'servers\',\'Serveurs\',true)">Gérer les serveurs</button></section>';main.querySelector('.title').after(notice);
+}
+async function saveSettingsGate(){await api('/api/community-settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({whitelistRoleId:document.getElementById('settings-role').value})});alert('Configuration enregistrée.');}
+
+function showMapGate(main){
+ const notice=document.createElement('section');notice.className='gate-menu-notice';notice.innerHTML='<h2>🗺️ Cartes & repères</h2><p>Crée des repères DayZ exportables en JSON. Les coordonnées ne sont jamais inventées.</p><section class="reference-box"><input id="map-name" placeholder="Nom du repère"><input id="map-x" type="number" step="any" placeholder="X"><input id="map-y" type="number" step="any" placeholder="Y / altitude"><input id="map-z" type="number" step="any" placeholder="Z"><button class="reference-red" onclick="addMapMarkerGate()">Ajouter le repère</button><button class="smallbtn" onclick="downloadMapMarkersGate()">Télécharger JSON</button><pre id="map-markers-output" style="white-space:pre-wrap"></pre></section>';main.querySelector('.title').after(notice);renderMapMarkersGate();
+}
+let gateMapMarkers=[];
+function addMapMarkerGate(){const name=document.getElementById('map-name').value.trim(),x=Number(document.getElementById('map-x').value),y=Number(document.getElementById('map-y').value),z=Number(document.getElementById('map-z').value);if(!name||![x,y,z].every(Number.isFinite))return alert('Nom + X/Y/Z requis.');gateMapMarkers.push({name,x,y,z});renderMapMarkersGate()}
+function renderMapMarkersGate(){const o=document.getElementById('map-markers-output');if(o)o.textContent=JSON.stringify(gateMapMarkers,null,2)}
+function downloadMapMarkersGate(){const b=new Blob([JSON.stringify(gateMapMarkers,null,2)+'\n'],{type:'application/json'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download='dayz-gate-markers.json';a.click();setTimeout(()=>URL.revokeObjectURL(u),1000)}
+
+Object.assign(window,{selectNitradoGate,disconnectNitradoGate,addModGate,removeModGate,saveSettingsGate,addMapMarkerGate,downloadMapMarkersGate});
 function openMenuPage(key,label,authenticated){
  document.querySelector('.gate-menu-notice')?.remove();
  if(!authenticated){if(key==='home'){window.scrollTo({top:0,behavior:'smooth'});return}showLogin(label);return}
@@ -158,13 +221,18 @@ function openMenuPage(key,label,authenticated){
  if(key==='topservers'){showSharedTopServers(main);return}
  if(key==='tools'){showToolsGate(main);return}
  if(key==='validator'){showFileValidatorGate(main);return}
- if(key==='validator'){showFileValidatorGate(main);return}
+ if(['bank','rp','shop','tickets','lottery','minigames'].includes(key)){showCommunityGate(main,key);return}
+ if(key==='servers'){showServersGate(main);return}
+ if(key==='mods'){showModsGate(main);return}
+ if(key==='logs'){showLogsGate(main);return}
+ if(key==='stats'){showStatsGate(main);return}
+ if(key==='settings'){showSettingsGate(main);return}
+ if(key==='map'){showMapGate(main);return}
  if(key==='partners'){main.insertAdjacentHTML('afterbegin','<section class="gate-menu-notice"><h2>INTERPOL · PARTENARIATS OFFICIELS</h2><p><strong>EXTINCTION ++ RSS</strong> ↔ <strong>DAYZ GATE</strong> ↔ <strong>BOT ARK</strong></p><p>Réseau commun Valhalla Extinction : actualités, outils serveurs, communautés et services connectés.</p></section>');return}
  main.querySelector('.title').textContent=label;
  if(['home','requests','players','shield'].includes(key)){loadRows(document.getElementById('search').value);document.getElementById('rows').closest('section').querySelector('h2').textContent=window.approvedOnly?'Joueurs whitelistés':'Demandes récentes';document.getElementById('rows').closest('section').scrollIntoView({behavior:'smooth'});return}
- if(key==='stats'){document.getElementById('stats').scrollIntoView({behavior:'smooth'});return}
- if(key==='servers'||key==='settings'){if(window.openGateHelp){window.openGateHelp('settings');return}document.getElementById('nitrado').closest('section').scrollIntoView({behavior:'smooth'});return}
- const notice=document.createElement('section');notice.className='gate-menu-notice';notice.innerHTML=`<h2>${esc(label)}</h2><p>Cette rubrique n’est pas encore disponible sur DayZ Gate.</p>`;main.querySelector('.title').after(notice);
+ if(key==='home'){window.scrollTo({top:0,behavior:'smooth'});return}
+ showToolsGate(main);
 }
 renderWelcomeDashboard();
 mountMenu();
