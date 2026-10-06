@@ -2,6 +2,7 @@ const { Client, GatewayIntentBits } = require("discord.js");
 const db = require("./db");
 const crypto=require("crypto");
 const community=require("./community");
+const discordTools=require("./discord-tools");
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
@@ -10,6 +11,7 @@ client.once("ready", () => console.log(`Bot connecté : ${client.user.tag} | ${c
 async function handleInteraction(interaction) {
   if (!interaction.isChatInputCommand())return;
   if(await community.handle(interaction,client))return;
+  if(await discordTools.handle(interaction,client))return;
   if(interaction.commandName==='dashboard'){
     await interaction.deferReply({ephemeral:true});
     const base=String(process.env.PUBLIC_BASE_URL||'https://dayz-gate-production.up.railway.app').replace(/\/$/,'');
