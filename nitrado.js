@@ -180,8 +180,22 @@ async function getSelectedServer() {
   return {
     serviceId: await getSetting("nitrado_service_id"),
     serviceLabel: await getSetting("nitrado_service_label"),
-    whitelistFile: await getSetting("nitrado_whitelist_file", process.env.NITRADO_WHITELIST_FILE || "dayzstandalone/whitelist.txt")
+    whitelistFile: await getSetting("nitrado_whitelist_file", process.env.NITRADO_WHITELIST_FILE || "dayzstandalone/whitelist.txt"),
+    logFile: await getSetting("nitrado_log_file", process.env.NITRADO_LOG_FILE || "")
   };
+}
+async function latestLogFile(serviceId){
+  const data=await api(`/services/${encodeURIComponent(serviceId)}/gameservers`);
+  const files=data.gameserver?.game_specific?.log_files||data.game_specific?.log_files||[];
+  const paths=files.map(x=>typeof x==="string"?x:(x?.path||x?.name||"")).filter(Boolean);
+  return paths.find(x=>/\.adm$/i.test(x))||paths.find(x=>/adm/i.test(x))||paths[0]||"";
+}
+async function downloadLatestLog(serviceId,preferred=""){
+  const file=preferred||await latestLogFile(serviceId);
+  if(!file)throw new Error("Aucun log DayZ disponible pour ce service");
+  const text=await downloadFile(serviceId,file);
+  if(Buffer.byteLength(text,"utf8")>1500000)throw new Error("Log DayZ trop volumineux");
+  return {file,text};
 }
 
 async function selectServer(serviceId, serviceLabel, whitelistFile) {
@@ -279,6 +293,10 @@ module.exports = {
   addPcWhitelistEntry,
   disconnect,
   getRedirectUri,
-  isConfigured
+  isConfigured,
+  getSelectedServer,
+  downloadFile,
+  latestLogFile,
+  downloadLatestLog
 };
 
