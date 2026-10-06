@@ -69,6 +69,26 @@ CREATE TABLE IF NOT EXISTS recurring_messages (
  message TEXT NOT NULL, interval_minutes INTEGER NOT NULL, enabled INTEGER NOT NULL DEFAULT 1,
  next_run_at ${expiry} NOT NULL, created_by TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT ${clock}
 );
+CREATE TABLE IF NOT EXISTS premium_codes (
+ id TEXT PRIMARY KEY, code_hash TEXT UNIQUE NOT NULL, product TEXT NOT NULL, billing TEXT NOT NULL,
+ duration_days INTEGER NOT NULL, max_servers INTEGER NOT NULL DEFAULT 0, created_by TEXT NOT NULL,
+ created_at TEXT NOT NULL DEFAULT ${clock}, used_by TEXT, used_scope TEXT, used_at TEXT
+);
+CREATE TABLE IF NOT EXISTS premium_subscriptions (
+ id TEXT PRIMARY KEY, scope_id TEXT NOT NULL, user_id TEXT NOT NULL, product TEXT NOT NULL,
+ starts_at TEXT NOT NULL DEFAULT ${clock}, expires_at TEXT NOT NULL, source_code_id TEXT,
+ created_at TEXT NOT NULL DEFAULT ${clock}
+);
+CREATE INDEX IF NOT EXISTS idx_premium_subscriptions_active ON premium_subscriptions(scope_id,user_id,product,expires_at);
+CREATE TABLE IF NOT EXISTS premium_servers (
+ id TEXT PRIMARY KEY, scope_id TEXT NOT NULL, label TEXT NOT NULL, service_id TEXT NOT NULL,
+ created_at TEXT NOT NULL DEFAULT ${clock}, UNIQUE(scope_id,service_id)
+);
+CREATE TABLE IF NOT EXISTS premium_payment_requests (
+ id TEXT PRIMARY KEY, scope_id TEXT NOT NULL, user_id TEXT NOT NULL, product TEXT NOT NULL,
+ billing TEXT NOT NULL, amount_cents INTEGER NOT NULL, reference TEXT UNIQUE NOT NULL,
+ status TEXT NOT NULL DEFAULT 'pending', created_at TEXT NOT NULL DEFAULT ${clock}, validated_at TEXT
+);
 CREATE TABLE IF NOT EXISTS member_xp (
  guild_id TEXT NOT NULL, user_id TEXT NOT NULL, xp INTEGER NOT NULL DEFAULT 0,
  level INTEGER NOT NULL DEFAULT 0, last_message_at ${expiry} NOT NULL DEFAULT 0,
