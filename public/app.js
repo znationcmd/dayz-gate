@@ -32,8 +32,8 @@ async function logout(){await fetch("/api/logout",{method:"POST"});location.relo
 fetch("/api/me").then(r=>r.json()).then(m=>{if(m.loggedIn)renderAdmin()});
 
 // Shared navigation, including the welcome screen and the installed application.
-const menuItems=[['Dashboard','home'],['Top Serveurs','topservers'],['Demandes','requests'],['Joueurs','players'],['Whitelist','shield'],['Serveurs','servers'],['Cartes','map'],['Mods','mods'],['Outils','tools'],['Logs','logs'],['Statistiques','stats'],['Configuration','settings'],['Partenariats','partners']];
-const iconPaths={home:'M3 10 12 3l9 7M5 9v12h5v-7h4v7h5V9',topservers:'M3 20h18M5 20v-4h14v4M7 16l2-7h6l2 7M9 5h6M12 3v2',requests:'M8 3h8v3H8zM8 4H5v17h14V4h-3M8 11h8M8 16h8',players:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9M16 3a4 4 0 0 1 0 8',shield:'M12 3 3 7v6c0 5 9 9 9 9s9-4 9-9V7zM8 12l3 3 5-6',servers:'M3 3h18v7H3zM3 14h18v7H3zM6 6h1M6 17h1M15 6h3M15 17h3',map:'m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3zM9 3v15M15 6v15',mods:'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',tools:'M14 6a6 6 0 0 0-7 7L2 18l4 4 5-5a6 6 0 0 0 7-7l-4 4-4-4z',logs:'M4 2h11l5 5v15H4zM14 2v6h6M8 12h8M8 16h8',stats:'M4 21V13h3v8M11 21V8h3v13M18 21V3h3v18',settings:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8M9 3h6l1 3 3 1 2 5-2 4-3 1-1 4H9l-1-4-3-1-2-4 2-5 3-1z',partners:'M8 12h8M12 8v8M5 5h14v14H5z'};
+const menuItems=[['Dashboard','home'],['Premium','premium'],['Top Serveurs','topservers'],['Demandes','requests'],['Joueurs','players'],['Whitelist','shield'],['Serveurs','servers'],['Radio','radio'],['Cartes','map'],['Mods','mods'],['Outils','tools'],['Logs','logs'],['Statistiques','stats'],['Configuration','settings'],['Partenariats','partners']];
+const iconPaths={premium:'M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z',radio:'M4 10a8 8 0 0 1 16 0M7 10a5 5 0 0 1 10 0M10 10a2 2 0 0 1 4 0M12 12v9',home:'M3 10 12 3l9 7M5 9v12h5v-7h4v7h5V9',topservers:'M3 20h18M5 20v-4h14v4M7 16l2-7h6l2 7M9 5h6M12 3v2',requests:'M8 3h8v3H8zM8 4H5v17h14V4h-3M8 11h8M8 16h8',players:'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9M16 3a4 4 0 0 1 0 8',shield:'M12 3 3 7v6c0 5 9 9 9 9s9-4 9-9V7zM8 12l3 3 5-6',servers:'M3 3h18v7H3zM3 14h18v7H3zM6 6h1M6 17h1M15 6h3M15 17h3',map:'m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3zM9 3v15M15 6v15',mods:'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z',tools:'M14 6a6 6 0 0 0-7 7L2 18l4 4 5-5a6 6 0 0 0 7-7l-4 4-4-4z',logs:'M4 2h11l5 5v15H4zM14 2v6h6M8 12h8M8 16h8',stats:'M4 21V13h3v8M11 21V8h3v13M18 21V3h3v18',settings:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8M9 3h6l1 3 3 1 2 5-2 4-3 1-1 4H9l-1-4-3-1-2-4 2-5 3-1z',partners:'M8 12h8M12 8v8M5 5h14v14H5z'};
 function menuIcon(key){return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${iconPaths[key]}"/></svg>`}
 function mountMenu(authenticated=false){
  document.querySelector('.side')?.remove();document.querySelector('.mobileNav')?.remove();document.querySelector('.nav')?.remove();
@@ -61,10 +61,47 @@ async function voteSharedTopServer(id){
 }
 window.voteSharedTopServer=voteSharedTopServer;
 
+
+async function showPremiumGate(main){
+ const notice=document.createElement('section');notice.className='gate-menu-notice';notice.innerHTML='<h2>★ PREMIUM DAYZ GATE</h2><p>Multi-serveur jusqu’à <strong>20 serveurs</strong> : 2,99 €/mois ou 25 €/an. Pass de combat Premium : 2,99 €/mois ou 25 €/an.</p><div id="gate-premium">Chargement…</div>';main.querySelector('.title').after(notice);
+ try{
+  const d=await api('/api/premium'),admin=(await api('/api/me')).role==='owner'?await api('/api/premium/admin').catch(()=>null):null;
+  const active=x=>x?'<span class="pill approve">ACTIF jusqu’au '+esc(new Date(x.expires_at).toLocaleString('fr-FR'))+'</span>':'<span class="pill">Inactif</span>';
+  document.getElementById('gate-premium').innerHTML=`
+   <div class="reference-panels" style="margin-top:14px">
+    <section class="reference-box"><h3>Premium Multi-serveur</h3><p>Jusqu’à <b>20 serveurs DayZ</b>.</p>${active(d.multiserver)}<p><button class="reference-red" onclick="premiumBuyGate('multiserver','monthly')">2,99 € / mois</button> <button class="smallbtn" onclick="premiumBuyGate('multiserver','yearly')">25 € / an</button></p></section>
+    <section class="reference-box"><h3>Pass de combat Premium</h3><p>Droit Premium pour le Season Pass.</p>${active(d.battlepass)}<p><button class="reference-red" onclick="premiumBuyGate('battlepass','monthly')">2,99 € / mois</button> <button class="smallbtn" onclick="premiumBuyGate('battlepass','yearly')">25 € / an</button></p></section>
+    <section class="reference-box"><h3>Activation</h3><p><input id="premium-code" placeholder="Code d’activation"><button class="reference-red" onclick="premiumRedeemGate()">Activer</button></p><p><a class="reference-red" href="${esc(d.paypalUrl)}" target="_blank" rel="noopener">Payer avec PayPal ↗</a></p></section>
+   </div>
+   <section class="reference-box" style="margin-top:14px"><h3>Serveurs enregistrés — ${d.servers.length}/${d.maxServers}</h3>${d.servers.map(s=>`<p><b>${esc(s.label)}</b> · Nitrado #${esc(s.service_id)} <button class="smallbtn red" onclick="premiumRemoveServerGate('${esc(s.id)}')">Supprimer</button></p>`).join('')||'<p>Aucun serveur enregistré.</p>'}</section>
+   ${admin?`<section class="reference-box" style="margin-top:14px"><h3>Validation propriétaire</h3><p>PayPal.me ne confirme pas automatiquement le paiement au bot : vérifie la référence puis génère le code.</p>${(admin.requests||[]).filter(x=>x.status==='pending').map(r=>`<p><b>${esc(r.reference)}</b> · ${esc(r.product)} · ${esc(r.billing)} · ${(Number(r.amount_cents)/100).toFixed(2)} € <button class="reference-red" onclick="premiumApproveGate('${esc(r.id)}')">Paiement vérifié → code</button></p>`).join('')||'<p>Aucune demande en attente.</p>'}</section>`:''}`;
+ }catch(e){document.getElementById('gate-premium').textContent=e.message||'Premium indisponible.'}
+}
+async function premiumBuyGate(product,billing){const r=await api('/api/premium/payment-request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({product,billing})});alert('Référence PayPal : '+r.reference+'\nMontant : '+r.amount+'\nAjoute cette référence dans la note du paiement.');window.open(r.paypalUrl,'_blank','noopener')}
+async function premiumRedeemGate(){const code=document.getElementById('premium-code')?.value||'';await api('/api/premium/redeem',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});alert('Premium activé.');openMenuPage('premium','Premium',true)}
+async function premiumRemoveServerGate(id){await api('/api/premium/servers/'+encodeURIComponent(id),{method:'DELETE'});openMenuPage('premium','Premium',true)}
+async function premiumApproveGate(id){const r=await api('/api/premium/admin/approve/'+encodeURIComponent(id),{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});prompt('Code à transmettre au client :',r.code);openMenuPage('premium','Premium',true)}
+Object.assign(window,{premiumBuyGate,premiumRedeemGate,premiumRemoveServerGate,premiumApproveGate});
+
+async function showRadioGate(main){
+ const notice=document.createElement('section');notice.className='gate-menu-notice';notice.innerHTML='<h2>📻 DAYZ GATE RADIO</h2><p>Messages RP, annonces serveur et rappels récurrents.</p><div id="gate-radio">Chargement…</div>';main.querySelector('.title').after(notice);
+ try{const d=await api('/api/radio'),s=d.settings||{};document.getElementById('gate-radio').innerHTML=`
+  <section class="reference-box" style="margin-top:12px"><h3>Station</h3><p><input id="radio-name" value="${esc(s.station_name||'DAYZ GATE RADIO')}" placeholder="Nom"><input id="radio-frequency" value="${esc(s.frequency||'87.8 MHz')}" placeholder="87.8 MHz"><input id="radio-channel" value="${esc(s.channel_id||'')}" placeholder="ID salon Discord"><button class="reference-red" onclick="saveRadioGate()">Enregistrer</button></p></section>
+  <section class="reference-box" style="margin-top:12px"><h3>Diffuser maintenant</h3><p><select id="radio-kind"><option value="hq">HQ</option><option value="ambiance">Ambiance</option><option value="alerte">Alerte</option></select><input id="radio-message" placeholder="Message radio"><button class="reference-red" onclick="sendRadioGate()">Diffuser</button></p></section>
+  <section class="reference-box" style="margin-top:12px"><h3>Rappel récurrent</h3><p><input id="radio-rec-channel" value="${esc(s.channel_id||'')}" placeholder="ID salon"><input id="radio-rec-message" placeholder="Message"><input id="radio-rec-minutes" type="number" min="5" value="60" placeholder="Minutes"><button class="reference-red" onclick="recurringRadioGate()">Programmer</button></p></section>
+  <section class="reference-box" style="margin-top:12px"><h3>Historique radio</h3>${(d.history||[]).map(x=>`<p><b>${esc(x.frequency)}</b> · ${esc(x.kind)} · ${esc(x.message)}</p>`).join('')||'<p>Aucun message.</p>'}</section>`;}catch(e){document.getElementById('gate-radio').textContent=e.message||'Radio indisponible.'}
+}
+async function saveRadioGate(){await api('/api/radio/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({stationName:document.getElementById('radio-name').value,frequency:document.getElementById('radio-frequency').value,channelId:document.getElementById('radio-channel').value})});openMenuPage('radio','Radio',true)}
+async function sendRadioGate(){await api('/api/radio/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:document.getElementById('radio-kind').value,message:document.getElementById('radio-message').value})});openMenuPage('radio','Radio',true)}
+async function recurringRadioGate(){await api('/api/radio/recurring',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({channelId:document.getElementById('radio-rec-channel').value,message:document.getElementById('radio-rec-message').value,intervalMinutes:Number(document.getElementById('radio-rec-minutes').value)})});openMenuPage('radio','Radio',true)}
+Object.assign(window,{saveRadioGate,sendRadioGate,recurringRadioGate});
+
 function openMenuPage(key,label,authenticated){
  document.querySelector('.gate-menu-notice')?.remove();
  if(!authenticated){if(key==='home'){window.scrollTo({top:0,behavior:'smooth'});return}showLogin(label);return}
  const main=document.querySelector('.main');window.approvedOnly=key==='players'||key==='shield';
+ if(key==='premium'){showPremiumGate(main);return}
+ if(key==='radio'){showRadioGate(main);return}
  if(key==='topservers'){showSharedTopServers(main);return}
  if(key==='partners'){main.insertAdjacentHTML('afterbegin','<section class="gate-menu-notice"><h2>INTERPOL · PARTENARIATS OFFICIELS</h2><p><strong>EXTINCTION ++ RSS</strong> ↔ <strong>DAYZ GATE</strong> ↔ <strong>BOT ARK</strong></p><p>Réseau commun Valhalla Extinction : actualités, outils serveurs, communautés et services connectés.</p></section>');return}
  main.querySelector('.title').textContent=label;
