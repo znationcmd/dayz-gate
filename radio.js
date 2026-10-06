@@ -11,10 +11,10 @@ async function recurringAdd(guildId,channelId,createdBy,message,intervalMinutes)
 async function recurringList(guildId){return db.prepare('SELECT * FROM recurring_messages WHERE guild_id=? ORDER BY created_at DESC').all(guildId);}
 async function recurringDelete(guildId,id){return db.prepare('DELETE FROM recurring_messages WHERE guild_id=? AND id=?').run(guildId,id);}
 function scope(req){return req.session.role==='founder'?req.session.guildId:(req.session.selectedGuildId||req.session.guildId||'owner')}
-function mount(app,mustBeLoggedIn){
+function mount(app,mustBeLoggedIn,discordClient){
  app.get('/api/radio',mustBeLoggedIn,async(req,res)=>{const gid=scope(req);res.json({settings:await settings(gid),history:await history(gid,50),recurring:await recurringList(gid)})});
  app.post('/api/radio/settings',mustBeLoggedIn,async(req,res)=>res.json(await configure(scope(req),req.body||{})));
- app.post('/api/radio/send',mustBeLoggedIn,async(req,res)=>res.json(await send(client,scope(req),req.session.discordUserId||req.session.admin,req.body?.message,req.body?.kind||'hq')));
+ app.post('/api/radio/send',mustBeLoggedIn,async(req,res)=>res.json(await send(discordClient,scope(req),req.session.discordUserId||req.session.admin,req.body?.message,req.body?.kind||'hq')));
  app.post('/api/radio/recurring',mustBeLoggedIn,async(req,res)=>res.json(await recurringAdd(scope(req),String(req.body?.channelId||''),req.session.discordUserId||req.session.admin,req.body?.message,req.body?.intervalMinutes)));
  app.delete('/api/radio/recurring/:id',mustBeLoggedIn,async(req,res)=>{await recurringDelete(scope(req),req.params.id);res.json({ok:true})});
 }
