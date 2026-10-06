@@ -9,7 +9,7 @@ function commands() {
     .addStringOption(o => o.setName("identifiant").setDescription("PC: UID DayZ • Xbox: Gamertag • PlayStation: ID PSN").setRequired(true))
     .addStringOption(o => o.setName("serveur").setDescription("Nom du serveur DayZ").setRequired(true)
   ) ,new SlashCommandBuilder().setName("dashboard").setDescription("Ouvrir le Dashboard DayZ Gate et son application")];
-  return base.concat(require('./community').commands()).map(c => c.toJSON());
+  return base.concat(require('./community').commands(),require('./discord-tools').commands()).map(c => c.toJSON());
 }
 
 async function registerCommands() {
