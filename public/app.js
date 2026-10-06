@@ -29,7 +29,23 @@ async function refresh(){const s=await api("/api/stats");stats.innerHTML=[["Whit
 async function loadRows(q){const a=await api("/api/requests?q="+encodeURIComponent(q));rows.innerHTML=a.filter(r=>!window.approvedOnly||r.status==="approved").slice(0,30).map(r=>`<tr><td><b>${esc(r.game_name)}</b><br><span class="muted">${esc(r.discord_username)}</span></td><td>${platform(r.platform)} ${esc(r.platform)}</td><td>${esc(String(r.server_name||"").replace(/^\\d+:/,""))}</td><td><span class="pill ${r.status==="approved"?"approve":r.status==="rejected"?"reject":""}">${r.status==="pending"?"En attente":r.status==="approved"?"Approuvé":"Refusé"}</span></td><td>${r.status==="pending"?`<button class="smallbtn" onclick="decide(${r.id},'approve')">✓</button><button class="smallbtn red" onclick="decide(${r.id},'reject')">✕</button>`:""}</td></tr>`).join("")||'<tr><td colspan="5" class="muted">Aucune demande</td></tr>'}
 async function decide(id,a){await api(`/api/requests/${id}/${a}`,{method:"POST"});await refresh()}
 async function logout(){await fetch("/api/logout",{method:"POST"});location.reload()}
-fetch("/api/me").then(r=>r.json()).then(m=>{if(m.loggedIn)renderAdmin()});
+async function consumeFounderDiscordLogin(){
+ const hash=location.hash.slice(1);
+ if(!hash.startsWith('founder-login='))return false;
+ const token=decodeURIComponent(hash.slice('founder-login='.length));
+ history.replaceState(null,'',location.pathname+location.search);
+ try{
+  const r=await fetch('/api/founder/discord-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||'Connexion Discord impossible');
+  await renderAdmin();
+ }catch(e){
+  renderWelcomeDashboard();mountMenu(false);showLogin();
+  const msg=document.getElementById('msg');if(msg)msg.textContent=e.message||'Connexion Discord impossible';
+ }
+ return true;
+}
+(async()=>{if(await consumeFounderDiscordLogin())return;fetch("/api/me").then(r=>r.json()).then(m=>{if(m.loggedIn)renderAdmin()})})();
 
 // Shared navigation, including the welcome screen and the installed application.
 const menuItems=[['Dashboard','home'],['Configuration','settings'],['Messages','messages'],['Arrivées et départs','welcome'],['Rôles automatiques','autoroles'],['Vérification','verification'],['Niveaux','levels'],['Invitations','invitations'],['Réputation','reputation'],['Salons vocaux temporaires','tempvoice'],["Route de l’Infini",'infinity'],['Suggestions','suggestions'],['Rôles sécurisés','secureroles'],['Modération','moderation'],['Auto-Modération','automod'],['Signalements','reports'],['Logs','logs'],['Tickets','tickets'],['Lots & Giveaways','giveaways'],['Sondages','polls'],['Embeds','embeds'],['Snippets','snippets'],['Notifications sociales','social'],['Messages récurrents','recurring'],['Salons de statistiques','statschannels'],['Compteurs','counters'],['Anniversaires','birthdays'],['Commandes personnalisées','customcommands'],['Réactions de mots','wordreactions'],['Starboards','starboard'],['Rôles-Réactions','reactionroles'],['Premium','premium'],['Top Serveurs','topservers'],['Demandes','requests'],['Joueurs','players'],['Whitelist','shield'],['Serveurs','servers'],['Banque','bank'],['RP','rp'],['Shop','shop'],['Loterie','lottery'],['Mini-jeux','minigames'],['Radio','radio'],['Cartes','map'],['Mods','mods'],['Outils','tools'],['Validateur','validator'],['Statistiques','stats'],['Partenariats','partners']];
@@ -38,7 +54,7 @@ const iconPaths={premium:'M12 2l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z',radio:'M4 
 function menuIcon(key){return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${iconPaths[key]}"/></svg>`}
 function mountMenu(authenticated=false){
  document.querySelector('.side')?.remove();document.querySelector('.mobileNav')?.remove();document.querySelector('.nav')?.remove();
- document.querySelector('.gate-draft-header')?.remove();document.querySelector('.gate-guild-rail')?.remove();document.querySelector('.gate-side')?.remove();document.querySelector('.gate-shade')?.remove();document.querySelector('.gate-toggle')?.remove();
+ document.querySelector('.gate-draft-header')?.remove();document.querySelector('.gate-guild-rail')?.remove();document.querySelector('.gate-mobile-guild-strip')?.remove();document.querySelector('.gate-side')?.remove();document.querySelector('.gate-shade')?.remove();document.querySelector('.gate-toggle')?.remove();
  if(!document.getElementById('gate-menu-style')){
   const style=document.createElement('style');style.id='gate-menu-style';style.textContent=`
   :root{--gate-header:88px;--gate-rail:72px;--gate-panel:330px}
@@ -74,9 +90,10 @@ function mountMenu(authenticated=false){
  }
  const header=document.createElement('header');header.className='gate-draft-header';header.innerHTML='<button type="button" class="gate-draft-menu" aria-label="Menu">☰</button><img src="/icon.svg" alt="DAYZ GATE"><div class="gate-draft-actions"><button id="dayz-force-refresh" type="button" class="gate-draft-refresh" aria-label="Actualiser" title="Actualiser">↻</button><button type="button" class="gate-draft-grid" aria-label="Modules"><i></i><i></i><i></i><i></i></button></div>';
  const rail=document.createElement('div');rail.className='gate-guild-rail';rail.setAttribute('aria-label','Discord installés');
+ const mobileStrip=document.createElement('div');mobileStrip.className='gate-mobile-guild-strip';mobileStrip.setAttribute('aria-label','Discord installés');mobileStrip.hidden=true;
  const side=document.createElement('aside');side.className='gate-side';side.id='gate-side';
  const grouped=menuGroups.map(([title,keys])=>{const rows=keys.map(key=>{const item=menuItems.find(([,k])=>k===key);if(!item)return'';const [label]=item;return `<button data-page="${key}" data-search="${(label+' '+key).toLowerCase()}">${menuIcon(key)}<span>${label}</span></button>`}).join('');return rows?`<section class="gate-group" data-group><h3>${title}</h3>${rows}</section>`:''}).join('');
- side.innerHTML=`<div class="gate-side-top"><div class="gate-server-context"><div class="fallback">DZ</div><div><strong>DAYZ GATE</strong><small>Discord sélectionné</small></div></div><label class="gate-search-wrap"><span>⌕</span><input class="gate-module-search" placeholder="Rechercher un module" autocomplete="off"></label></div><nav class="gate-links" aria-label="Menu principal">${grouped}</nav><a class="gate-discord" href="https://discord.gg/3JMrNpGFr" target="_blank" rel="noopener"><strong>Rejoindre le Discord DAYZ GATE</strong><span>discord.gg/3JMrNpGFr</span></a>`;
+ side.innerHTML=`<div class="gate-side-top"><div class="gate-server-context"><div class="fallback">DZ</div><div><strong>DAYZ GATE</strong><small>Discord sélectionné</small></div></div><label class="gate-search-wrap"><span>⌕</span><input class="gate-module-search" placeholder="Rechercher un module" autocomplete="off"></label></div><nav class="gate-links" aria-label="Menu principal">${grouped}</nav><a class="gate-discord" href="https://discord.gg/uyUKxs7Fac" target="_blank" rel="noopener"><strong>Rejoindre le Discord DAYZ GATE</strong><span>discord.gg/uyUKxs7Fac</span></a>`;
  const shade=document.createElement('div');shade.className='gate-shade';
  const toggle=header.querySelector('.gate-draft-menu'),gridButton=header.querySelector('.gate-draft-grid'),refreshButton=header.querySelector('.gate-draft-refresh');
  const open=()=>{side.classList.add('open');shade.classList.add('open');document.body.classList.add('gate-menu-open')};
@@ -84,16 +101,20 @@ function mountMenu(authenticated=false){
  toggle.onclick=()=>side.classList.contains('open')?close():open();gridButton.onclick=()=>side.classList.contains('open')?close():open();if(refreshButton)refreshButton.onclick=forceDayzGateRefresh;shade.onclick=close;document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
  side.querySelectorAll('[data-page]').forEach(button=>button.onclick=()=>{side.querySelectorAll('[data-page]').forEach(b=>b.classList.toggle('selected',b===button));close();openMenuPage(button.dataset.page,menuItems.find(([,k])=>k===button.dataset.page)?.[0]||button.textContent.trim(),authenticated)});
  const search=side.querySelector('.gate-module-search');search.oninput=()=>{const q=search.value.trim().toLowerCase();side.querySelectorAll('[data-page]').forEach(b=>b.hidden=!!q&&!b.dataset.search.includes(q));side.querySelectorAll('[data-group]').forEach(g=>g.hidden=![...g.querySelectorAll('[data-page]')].some(b=>!b.hidden))};
- document.body.prepend(shade,side,rail,header);
+ document.body.prepend(shade,side,rail,mobileStrip,header);
  if(authenticated){
   api('/api/me').then(me=>{
    const guilds=Array.isArray(me.guilds)?me.guilds:[];
    const selected=me.selectedGuildId||me.guildId||guilds[0]?.id||'';
    const initials=n=>String(n||'?').split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase();
-   rail.innerHTML=guilds.map(g=>`<button type="button" class="gate-guild-btn ${g.id===selected?'active':''}" data-guild="${esc(g.id)}" title="${esc(g.name)}">${g.icon?`<img src="${esc(g.icon)}" alt="">`:`<span>${esc(initials(g.name))}</span>`}</button>`).join('');
+   const bubbles=guilds.map(g=>`<button type="button" class="gate-guild-btn ${g.id===selected?'active':''}" data-guild="${esc(g.id)}" title="${esc(g.name)}">${g.icon?`<img src="${esc(g.icon)}" alt="">`:`<span>${esc(initials(g.name))}</span>`}</button>`).join('');
+   rail.innerHTML=bubbles;
+   mobileStrip.hidden=!guilds.length;
+   mobileStrip.innerHTML=guilds.length?`<strong>DISCORD</strong><div class="gate-mobile-guild-scroll">${bubbles}</div>`:'';
    const current=guilds.find(g=>g.id===selected)||guilds[0];
    if(current){const ctx=side.querySelector('.gate-server-context');ctx.innerHTML=`${current.icon?`<img src="${esc(current.icon)}" alt="">`:`<div class="fallback">${esc(initials(current.name))}</div>`}<div><strong>${esc(current.name)}</strong><small>Bot installé · ${Number(current.memberCount||0)} membre(s)</small></div>`}
-   rail.querySelectorAll('[data-guild]').forEach(b=>b.onclick=async()=>{await api('/api/guild/select',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:b.dataset.guild})});location.reload()});
+   const bindGuilds=root=>root?.querySelectorAll('[data-guild]').forEach(b=>b.onclick=async()=>{await api('/api/guild/select',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:b.dataset.guild})});location.reload()});
+   bindGuilds(rail);bindGuilds(mobileStrip);
   }).catch(()=>{});
  }
  if(window.mountHelp)window.mountHelp();
@@ -375,3 +396,23 @@ if('serviceWorker' in navigator){
  setInterval(checkDayzGateUpdate,10*60*1000);
 }else window.addEventListener('load',mountDayzRefreshButton);
 window.forceDayzGateRefresh=forceDayzGateRefresh;
+
+const gateMobileGuildStyle=document.createElement('style');gateMobileGuildStyle.textContent=`
+/* DayZ Gate visible mobile Discord strip v15 */
+.gate-mobile-guild-strip{display:none}
+@media(max-width:800px){
+ .gate-mobile-guild-strip:not([hidden]){
+   position:fixed;left:0;right:0;top:calc(var(--gate-header) + env(safe-area-inset-top,0px));z-index:61;
+   height:64px;padding:7px 10px;display:flex;align-items:center;gap:10px;
+   background:rgba(18,21,24,.97);border-bottom:1px solid rgba(225,27,43,.30);
+   box-shadow:0 8px 24px #0007;backdrop-filter:blur(16px)
+ }
+ .gate-mobile-guild-strip>strong{font-size:10px;letter-spacing:.13em;color:#8f989e;writing-mode:vertical-rl;transform:rotate(180deg)}
+ .gate-mobile-guild-scroll{display:flex;align-items:center;gap:9px;overflow-x:auto;overflow-y:hidden;min-width:0;flex:1;scrollbar-width:none}
+ .gate-mobile-guild-scroll::-webkit-scrollbar{display:none}
+ .gate-mobile-guild-strip .gate-guild-btn{width:46px;height:46px;min-width:46px;min-height:46px;flex:0 0 46px;border-radius:50%}
+ .gate-mobile-guild-strip .gate-guild-btn.active:before{display:none}
+ .gate-menu-open .gate-mobile-guild-strip{display:none!important}
+ .shell,.main{padding-top:calc(var(--gate-header) + 76px + env(safe-area-inset-top,0px))!important}
+}
+`;document.head.appendChild(gateMobileGuildStyle);
