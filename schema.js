@@ -53,6 +53,17 @@ CREATE TABLE IF NOT EXISTS dayz_construction_logs (
  x REAL, y REAL, z REAL, log_time TEXT, occurred_at TEXT NOT NULL DEFAULT ${clock}, raw TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_dayz_construction_guild_time ON dayz_construction_logs(guild_id,occurred_at);
+CREATE TABLE IF NOT EXISTS radio_settings (
+ guild_id TEXT PRIMARY KEY, frequency TEXT NOT NULL DEFAULT '87.8 MHz',
+ channel_id TEXT, station_name TEXT NOT NULL DEFAULT 'DAYZ GATE RADIO',
+ updated_at TEXT NOT NULL DEFAULT ${clock}
+);
+CREATE TABLE IF NOT EXISTS radio_messages (
+ id TEXT PRIMARY KEY, guild_id TEXT NOT NULL, author_id TEXT NOT NULL,
+ kind TEXT NOT NULL DEFAULT 'hq', message TEXT NOT NULL,
+ frequency TEXT NOT NULL DEFAULT '87.8 MHz', created_at TEXT NOT NULL DEFAULT ${clock}
+);
+CREATE INDEX IF NOT EXISTS idx_radio_messages_guild_time ON radio_messages(guild_id,created_at);
 CREATE TABLE IF NOT EXISTS recurring_messages (
  id TEXT PRIMARY KEY, guild_id TEXT NOT NULL, channel_id TEXT NOT NULL,
  message TEXT NOT NULL, interval_minutes INTEGER NOT NULL, enabled INTEGER NOT NULL DEFAULT 1,
