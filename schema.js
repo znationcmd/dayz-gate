@@ -98,6 +98,56 @@ CREATE TABLE IF NOT EXISTS warnings (
  id ${id}, guild_id TEXT NOT NULL, user_id TEXT NOT NULL, moderator_id TEXT NOT NULL,
  reason TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT ${clock}
 );
+
+CREATE TABLE IF NOT EXISTS community_wallets (
+ guild_id TEXT NOT NULL, user_id TEXT NOT NULL, balance INTEGER NOT NULL DEFAULT 1000,
+ PRIMARY KEY(guild_id,user_id)
+);
+CREATE TABLE IF NOT EXISTS community_transactions (
+ id TEXT PRIMARY KEY, guild_id TEXT NOT NULL, user_id TEXT NOT NULL,
+ amount INTEGER NOT NULL, kind TEXT NOT NULL, details TEXT NOT NULL DEFAULT '{}',
+ created_at TEXT NOT NULL DEFAULT ${clock}
+);
+CREATE INDEX IF NOT EXISTS idx_community_transactions_user ON community_transactions(guild_id,user_id,created_at);
+CREATE TABLE IF NOT EXISTS community_tickets (
+ id TEXT PRIMARY KEY, guild_id TEXT NOT NULL, user_id TEXT NOT NULL,
+ subject TEXT NOT NULL, channel_id TEXT, status TEXT NOT NULL DEFAULT 'open',
+ created_at TEXT NOT NULL DEFAULT ${clock}, closed_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_community_tickets_guild ON community_tickets(guild_id,status);
+CREATE TABLE IF NOT EXISTS community_ticket_messages (
+ id TEXT PRIMARY KEY, ticket_id TEXT NOT NULL, user_id TEXT NOT NULL,
+ username TEXT NOT NULL, message TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT ${clock}
+);
+CREATE TABLE IF NOT EXISTS rp_profiles (
+ guild_id TEXT NOT NULL, user_id TEXT NOT NULL, job TEXT NOT NULL DEFAULT 'Survivant',
+ faction TEXT NOT NULL DEFAULT '', bio TEXT NOT NULL DEFAULT '',
+ updated_at TEXT NOT NULL DEFAULT ${clock}, PRIMARY KEY(guild_id,user_id)
+);
+CREATE TABLE IF NOT EXISTS community_shop_items (
+ id TEXT PRIMARY KEY, guild_id TEXT NOT NULL, name TEXT NOT NULL,
+ description TEXT NOT NULL DEFAULT '', price INTEGER NOT NULL, enabled INTEGER NOT NULL DEFAULT 1,
+ created_at TEXT NOT NULL DEFAULT ${clock}
+);
+CREATE TABLE IF NOT EXISTS community_shop_orders (
+ id TEXT PRIMARY KEY, guild_id TEXT NOT NULL, user_id TEXT NOT NULL, item_id TEXT NOT NULL,
+ price INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'pending',
+ created_at TEXT NOT NULL DEFAULT ${clock}
+);
+CREATE TABLE IF NOT EXISTS community_lottery_tickets (
+ id TEXT PRIMARY KEY, guild_id TEXT NOT NULL, user_id TEXT NOT NULL,
+ draw_key TEXT NOT NULL, cost INTEGER NOT NULL, created_at TEXT NOT NULL DEFAULT ${clock}
+);
+CREATE TABLE IF NOT EXISTS community_lottery_draws (
+ id TEXT PRIMARY KEY, guild_id TEXT NOT NULL, draw_key TEXT NOT NULL,
+ winner_user_id TEXT, prize INTEGER NOT NULL DEFAULT 0, drawn_at TEXT,
+ UNIQUE(guild_id,draw_key)
+);
+CREATE TABLE IF NOT EXISTS community_minigames (
+ id TEXT PRIMARY KEY, guild_id TEXT NOT NULL, user_id TEXT NOT NULL,
+ game TEXT NOT NULL, score INTEGER NOT NULL DEFAULT 0, reward INTEGER NOT NULL DEFAULT 0,
+ created_at TEXT NOT NULL DEFAULT ${clock}
+);
 CREATE TABLE IF NOT EXISTS database_migrations (name TEXT PRIMARY KEY);
 `;
 };
