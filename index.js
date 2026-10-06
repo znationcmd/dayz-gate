@@ -15,6 +15,7 @@ async function main() {
   await require("./db").init();
   await registerCommands();
   await client.login(process.env.DISCORD_TOKEN);
+  require('./radio').start(client);
 
   const app = buildDashboard();
   const port = Number(process.env.PORT || 3000);
