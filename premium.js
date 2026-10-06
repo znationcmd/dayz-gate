@@ -22,7 +22,7 @@ async function status(scopeId,userId,owner=false){
   active(scopeId,userId,'battlepass',owner),
   db.prepare('SELECT * FROM premium_servers WHERE scope_id=? ORDER BY created_at').all(scopeId)
  ]);
- return {paypalUrl:PAYPAL_URL,plans:PLANS,multiserver:multi||null,battlepass:battle||null,maxServers:multi?20:1,servers,complimentary:Boolean(owner)};
+ return {paypalUrl:PAYPAL_URL,plans:PLANS,multiserver:multi||null,battlepass:battle||null,maxServers:owner?null:(multi?20:1),unlimitedServers:Boolean(owner),servers,complimentary:Boolean(owner)};
 }
 async function requestPayment(scopeId,userId,product,billing){
  const p=plan(product,billing),id=crypto.randomUUID(),reference=`VAL-${Date.now().toString(36).toUpperCase()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
@@ -50,12 +50,12 @@ async function redeem(scopeId,userId,code){
  return {id,scope_id:scopeId,user_id:userId,product:row.product,expires_at:expires,maxServers:row.product==='multiserver'?20:0};
 }
 async function registerServer(scopeId,userId,label,serviceId,owner=false){
- const multi=await active(scopeId,userId,'multiserver',owner),limit=multi?20:1,service=String(serviceId||'').trim();
+ const multi=await active(scopeId,userId,'multiserver',owner),limit=owner?null:(multi?20:1),service=String(serviceId||'').trim();
  if(!/^\d{1,20}$/.test(service))bad('ID Nitrado invalide.');
  const existing=await db.prepare('SELECT * FROM premium_servers WHERE scope_id=? AND service_id=?').get(scopeId,service);
  if(existing){await db.prepare('UPDATE premium_servers SET label=? WHERE id=?').run(String(label||existing.label).trim().slice(0,100),existing.id);return {...existing,label:String(label||existing.label).trim().slice(0,100)};}
  const count=Number((await db.prepare('SELECT COUNT(*) c FROM premium_servers WHERE scope_id=?').get(scopeId)).c||0);
- if(count>=limit)bad(multi?'Limite Premium de 20 serveurs atteinte.':'Pack Premium Multi-serveur requis pour ajouter plus d’un serveur.',403);
+ if(limit!==null&&count>=limit)bad(multi?'Limite Premium de 20 serveurs atteinte.':'Pack Premium Multi-serveur requis pour ajouter plus d’un serveur.',403);
  const id=crypto.randomUUID(),name=String(label||('DayZ #'+service)).trim().slice(0,100);
  await db.prepare('INSERT INTO premium_servers(id,scope_id,label,service_id) VALUES(?,?,?,?)').run(id,scopeId,name,service);
  return {id,scope_id:scopeId,label:name,service_id:service};
