@@ -10,5 +10,13 @@ async function send(client,guildId,authorId,message,kind='hq'){const cfg=await s
 async function recurringAdd(guildId,channelId,createdBy,message,intervalMinutes){const minutes=Math.max(5,Math.min(10080,Number(intervalMinutes)||60)),id=uid(),next=Date.now()+minutes*60000,text=String(message||'').trim().slice(0,1800);if(!text)throw new Error('Message vide.');await db.prepare('INSERT INTO recurring_messages(id,guild_id,channel_id,message,interval_minutes,next_run_at,created_by) VALUES(?,?,?,?,?,?,?)').run(id,guildId,channelId,text,minutes,next,String(createdBy||''));return {id,minutes,next};}
 async function recurringList(guildId){return db.prepare('SELECT * FROM recurring_messages WHERE guild_id=? ORDER BY created_at DESC').all(guildId);}
 async function recurringDelete(guildId,id){return db.prepare('DELETE FROM recurring_messages WHERE guild_id=? AND id=?').run(guildId,id);}
+function scope(req){return req.session.role==='founder'?req.session.guildId:(req.session.selectedGuildId||req.session.guildId||'owner')}
+function mount(app,mustBeLoggedIn){
+ app.get('/api/radio',mustBeLoggedIn,async(req,res)=>{const gid=scope(req);res.json({settings:await settings(gid),history:await history(gid,50),recurring:await recurringList(gid)})});
+ app.post('/api/radio/settings',mustBeLoggedIn,async(req,res)=>res.json(await configure(scope(req),req.body||{})));
+ app.post('/api/radio/send',mustBeLoggedIn,async(req,res)=>res.json(await send(client,scope(req),req.session.discordUserId||req.session.admin,req.body?.message,req.body?.kind||'hq')));
+ app.post('/api/radio/recurring',mustBeLoggedIn,async(req,res)=>res.json(await recurringAdd(scope(req),String(req.body?.channelId||''),req.session.discordUserId||req.session.admin,req.body?.message,req.body?.intervalMinutes)));
+ app.delete('/api/radio/recurring/:id',mustBeLoggedIn,async(req,res)=>{await recurringDelete(scope(req),req.params.id);res.json({ok:true})});
+}
 function start(client){let busy=false;async function tick(){if(busy)return;busy=true;try{const rows=await db.prepare('SELECT * FROM recurring_messages WHERE enabled=1 AND next_run_at<=? ORDER BY next_run_at LIMIT 30').all(Date.now());for(const r of rows){try{const ch=await client.channels.fetch(r.channel_id);if(!ch?.isTextBased())throw new Error('Salon inaccessible');await ch.send({content:`⏰ **Rappel récurrent**\n${r.message}`,allowedMentions:{parse:[]}});await db.prepare('UPDATE recurring_messages SET next_run_at=? WHERE id=?').run(Date.now()+Number(r.interval_minutes)*60000,r.id);}catch(e){console.error('Rappel récurrent :',e.code||e.message)}}}finally{busy=false}}tick();const timer=setInterval(tick,60000);timer.unref();return timer;}
-module.exports={settings,configure,history,add,send,format,recurringAdd,recurringList,recurringDelete,start};
+module.exports={settings,configure,history,add,send,format,recurringAdd,recurringList,recurringDelete,start,mount};
