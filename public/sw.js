@@ -7,7 +7,7 @@ self.addEventListener('fetch',event=>{
  const url=new URL(event.request.url);
  if(event.request.method!=='GET'||url.origin!==self.location.origin||url.pathname.startsWith('/api/')||url.pathname.startsWith('/auth/'))return;
  event.respondWith(fetch(event.request,{cache:'no-store'}).then(response=>{
-   if(response.ok)caches.open(CACHE).then(cache=>cache.put(event.request,response.clone()));
+   if(response.ok&&ASSETS.some(a=>a.split('?')[0]===url.pathname))caches.open(CACHE).then(cache=>cache.put(event.request,response.clone()));
    return response;
  }).catch(()=>caches.match(event.request).then(response=>response||(event.request.mode==='navigate'?caches.match('/'):Response.error()))));
 });
