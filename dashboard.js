@@ -15,6 +15,7 @@ const community=require('./community');
 const {client}=require("./bot");
 
 function buildDashboard() {
+  const scopeId=req=>req.session.role==='founder'?req.session.guildId:(req.session.selectedGuildId||req.session.guildId||'owner');
   const app = express();
   // Express 4 does not catch rejected promises from async route handlers.
   for (const method of ['get', 'post', 'delete']) {
@@ -71,6 +72,31 @@ function buildDashboard() {
   community.mount(app,mustBeLoggedIn);
   app.post('/api/top-servers/register',mustBeLoggedIn,async(req,res)=>{if(req.session.role!=='owner')return res.status(403).json({error:'Réservé au propriétaire'});res.json(await topServers.register({...req.body,source_bot:'DAYZ GATE'}));});
   app.post('/api/file-validator',mustBeLoggedIn,async(req,res)=>{try{res.json(fileValidator.validateFile(String(req.body.filename||''),String(req.body.content||'')))}catch(e){res.status(400).json({error:e.message})}});
+  app.get('/api/logs',mustBeLoggedIn,async(req,res)=>{
+    const gid=scopeId(req),limit=Math.max(20,Math.min(500,Number(req.query.limit)||200));
+    const activity=await db.prepare('SELECT * FROM dayz_activity_logs WHERE guild_id=? ORDER BY occurred_at DESC LIMIT ?').all(gid,limit);
+    const construction=await db.prepare('SELECT * FROM dayz_construction_logs WHERE guild_id=? ORDER BY occurred_at DESC LIMIT ?').all(gid,limit);
+    res.json({activity,construction});
+  });
+  app.get('/api/mods',mustBeLoggedIn,async(req,res)=>res.json(await db.prepare('SELECT * FROM dayz_mods WHERE guild_id=? ORDER BY name').all(scopeId(req))));
+  app.post('/api/mods',mustBeLoggedIn,async(req,res)=>{
+    const workshopId=String(req.body.workshopId||'').trim(),name=String(req.body.name||'').trim().slice(0,120),notes=String(req.body.notes||'').trim().slice(0,500);
+    if(!/^\d{5,20}$/.test(workshopId)||!name)return res.status(400).json({error:'Workshop ID et nom requis'});
+    const id=crypto.randomUUID(),gid=scopeId(req);
+    await db.prepare("INSERT INTO dayz_mods(id,guild_id,workshop_id,name,notes) VALUES(?,?,?,?,?) ON CONFLICT(guild_id,workshop_id) DO UPDATE SET name=excluded.name,notes=excluded.notes,enabled=1").run(id,gid,workshopId,name,notes);
+    res.json(await db.prepare('SELECT * FROM dayz_mods WHERE guild_id=? AND workshop_id=?').get(gid,workshopId));
+  });
+  app.delete('/api/mods/:id',mustBeLoggedIn,async(req,res)=>{await db.prepare('DELETE FROM dayz_mods WHERE guild_id=? AND id=?').run(scopeId(req),req.params.id);res.json({ok:true})});
+  app.get('/api/community-settings',mustBeLoggedIn,async(req,res)=>{
+    const gid=scopeId(req),row=await db.prepare('SELECT * FROM guild_settings WHERE guild_id=?').get(gid);
+    res.json(row||{guild_id:gid,whitelist_role_id:''});
+  });
+  app.post('/api/community-settings',mustBeLoggedIn,async(req,res)=>{
+    const gid=scopeId(req),role=String(req.body.whitelistRoleId||'').trim();
+    if(role&&!/^\d{15,25}$/.test(role))return res.status(400).json({error:'ID rôle Discord invalide'});
+    await db.prepare('INSERT INTO guild_settings(guild_id,whitelist_role_id) VALUES(?,?) ON CONFLICT(guild_id) DO UPDATE SET whitelist_role_id=excluded.whitelist_role_id').run(gid,role);
+    res.json({ok:true,guild_id:gid,whitelist_role_id:role});
+  });
   app.post('/api/login',async (req,res)=>{
     const key=req.ip;const now=Date.now();const tries=loginAttempts.get(key)||{count:0,time:now};if(now-tries.time>900000){tries.count=0;tries.time=now}if(tries.count>=10)return res.status(429).json({error:'Réessaie dans 15 minutes'});tries.count++;loginAttempts.set(key,tries);
     const {username,password}=req.body;if(typeof username!=='string'||typeof password!=='string'||password.length>128)return res.status(401).json({error:'Identifiants incorrects'});
