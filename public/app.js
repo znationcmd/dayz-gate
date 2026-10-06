@@ -262,3 +262,51 @@ body{animation:dayzBackgroundDrift 34s ease-in-out infinite;background-size:auto
 @media(max-width:800px){.shell,.main{padding-top:calc(132px + env(safe-area-inset-top,0px))!important}.gate-toggle{top:calc(12px + env(safe-area-inset-top,0px))}.reference-top{position:absolute;top:calc(72px + env(safe-area-inset-top,0px));left:14px;right:14px;height:48px!important;display:flex!important;align-items:center!important;gap:8px!important}.reference-top .reference-search{display:none}.reference-account{flex:1;justify-content:center;min-height:46px}.gate-language{min-height:46px!important}.gate-side{padding-top:calc(54px + env(safe-area-inset-top,0px))!important}}
 @media(prefers-reduced-motion:reduce){body{animation:none}}
 `;document.head.appendChild(gatePolish);
+
+let dayzGateReloading=false,dayzGateSw=null;
+async function forceDayzGateRefresh(){
+ const btn=document.getElementById('dayz-force-refresh');if(btn){btn.disabled=true;btn.textContent='…'}
+ try{
+  if('serviceWorker' in navigator){
+   dayzGateSw=dayzGateSw||await navigator.serviceWorker.getRegistration('/');
+   if(dayzGateSw){
+    await dayzGateSw.update();
+    if(dayzGateSw.waiting){dayzGateSw.waiting.postMessage({type:'SKIP_WAITING'});return}
+   }
+  }
+  location.reload();
+ }catch{location.reload()}finally{if(btn){btn.disabled=false;btn.textContent='↻ Actualiser'}}
+}
+async function checkDayzGateUpdate(){
+ if(!navigator.onLine||!('serviceWorker' in navigator))return;
+ try{
+  dayzGateSw=dayzGateSw||await navigator.serviceWorker.getRegistration('/');
+  if(!dayzGateSw)return;
+  await dayzGateSw.update();
+  if(dayzGateSw.waiting)dayzGateSw.waiting.postMessage({type:'SKIP_WAITING'});
+ }catch{}
+}
+function mountDayzRefreshButton(){
+ if(document.getElementById('dayz-force-refresh'))return;
+ const b=document.createElement('button');b.id='dayz-force-refresh';b.type='button';b.textContent='↻ Actualiser';b.title='Vérifier et charger la dernière version';
+ b.style.cssText='position:fixed;right:14px;top:calc(14px + env(safe-area-inset-top,0px));z-index:9999;background:#12171b;color:#fff;border:1px solid #e11b2b;border-radius:12px;padding:10px 13px;font-weight:800;box-shadow:0 8px 22px #0008';
+ b.onclick=forceDayzGateRefresh;document.body.appendChild(b);
+}
+if('serviceWorker' in navigator){
+ navigator.serviceWorker.addEventListener('controllerchange',()=>{if(dayzGateReloading)return;dayzGateReloading=true;location.reload()});
+ window.addEventListener('load',async()=>{
+  mountDayzRefreshButton();
+  try{
+   dayzGateSw=await navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'});
+   dayzGateSw.addEventListener('updatefound',()=>{
+    const sw=dayzGateSw.installing;if(!sw)return;
+    sw.addEventListener('statechange',()=>{if(sw.state==='installed'&&navigator.serviceWorker.controller)sw.postMessage({type:'SKIP_WAITING'})});
+   });
+   await dayzGateSw.update();
+  }catch{}
+ });
+ document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkDayzGateUpdate()});
+ window.addEventListener('focus',checkDayzGateUpdate);
+ setInterval(checkDayzGateUpdate,10*60*1000);
+}else window.addEventListener('load',mountDayzRefreshButton);
+window.forceDayzGateRefresh=forceDayzGateRefresh;
