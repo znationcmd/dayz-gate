@@ -142,7 +142,7 @@ function buildDashboard() {
   app.post("/api/nitrado/select", mustBeLoggedIn, async (req,res)=> {
     const { serviceId, serviceLabel, whitelistFile } = req.body;
     if (!serviceId) return res.status(400).json({ error: "Service Nitrado manquant" });
-    await premium.registerServer(premium.scope(req),premium.user(req),serviceLabel||('DayZ #'+serviceId),serviceId);
+    await premium.registerServer(premium.scope(req),premium.user(req),serviceLabel||('DayZ #'+serviceId),serviceId,req.session.role==='owner');
     await nitrado.selectServer(serviceId, serviceLabel, whitelistFile);
     res.json({ ok: true, selected: (await nitrado.getConnectionStatus()).selected });
   });
