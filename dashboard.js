@@ -7,6 +7,7 @@ const db = require("./db");
 const { grantWhitelistRole, removeWhitelistRole } = require("./bot");
 const nitrado = require("./nitrado");
 const founders=require("./founders");
+const radio=require('./radio');
 const {client}=require("./bot");
 
 function buildDashboard() {
@@ -61,6 +62,7 @@ function buildDashboard() {
   app.use((req,res,next)=>{if(['POST','DELETE','PUT','PATCH'].includes(req.method)&&req.headers.origin){try{if(new URL(req.headers.origin).host!==req.get('host'))return res.status(403).json({error:'Origine non autorisée'})}catch{return res.status(403).json({error:'Origine non autorisée'})}}next()});
   app.use((req,res,next)=>nitrado.withScope(req.session.role==='founder'?req.session.guildId:(req.session.selectedGuildId||'owner'),next));
   founders.mount(app,mustBeLoggedIn,client);
+  radio.mount(app,mustBeLoggedIn);
   app.post('/api/login',async (req,res)=>{
     const key=req.ip;const now=Date.now();const tries=loginAttempts.get(key)||{count:0,time:now};if(now-tries.time>900000){tries.count=0;tries.time=now}if(tries.count>=10)return res.status(429).json({error:'Réessaie dans 15 minutes'});tries.count++;loginAttempts.set(key,tries);
     const {username,password}=req.body;if(typeof username!=='string'||typeof password!=='string'||password.length>128)return res.status(401).json({error:'Identifiants incorrects'});
