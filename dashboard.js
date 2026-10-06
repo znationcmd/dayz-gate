@@ -67,7 +67,7 @@ function buildDashboard() {
   app.use((req,res,next)=>{if(['POST','DELETE','PUT','PATCH'].includes(req.method)&&req.headers.origin){try{if(new URL(req.headers.origin).host!==req.get('host'))return res.status(403).json({error:'Origine non autorisée'})}catch{return res.status(403).json({error:'Origine non autorisée'})}}next()});
   app.use((req,res,next)=>nitrado.withScope(req.session.role==='founder'?req.session.guildId:(req.session.selectedGuildId||'owner'),next));
   founders.mount(app,mustBeLoggedIn,client);
-  radio.mount(app,mustBeLoggedIn);
+  radio.mount(app,mustBeLoggedIn,client);
   premium.mount(app,mustBeLoggedIn);
   community.mount(app,mustBeLoggedIn);
   app.post('/api/top-servers/register',mustBeLoggedIn,async(req,res)=>{if(req.session.role!=='owner')return res.status(403).json({error:'Réservé au propriétaire'});res.json(await topServers.register({...req.body,source_bot:'DAYZ GATE'}));});
