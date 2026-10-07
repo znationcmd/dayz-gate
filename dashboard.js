@@ -56,6 +56,30 @@ async function cmdStructure(id){
     roles:[...g.roles.cache.values()].map(r=>({id:r.id,name:r.name,color:r.hexColor,position:r.position,hoist:r.hoist,mentionable:r.mentionable,managed:r.managed,permissions:r.permissions.bitfield.toString(),everyone:r.id===g.id})).sort((a,b)=>b.position-a.position)
   };
 }
+
+function cmdSerializeMessage(m){
+  return {
+    id:String(m.id),channelId:String(m.channelId||''),guildId:m.guildId?String(m.guildId):null,
+    content:String(m.content||''),timestamp:m.createdAt?.toISOString?.()||null,editedTimestamp:m.editedAt?.toISOString?.()||null,
+    author:{id:String(m.author?.id||''),username:String(m.member?.displayName||m.author?.globalName||m.author?.username||'Utilisateur'),tag:String(m.author?.username||''),bot:Boolean(m.author?.bot),avatar:m.author?.displayAvatarURL?.({extension:'webp',size:128})||null},
+    attachments:[...(m.attachments?.values?.()||[])].map(a=>({id:String(a.id),filename:a.name||a.filename||'fichier',url:a.url,proxyUrl:a.proxyURL||null,contentType:a.contentType||null,size:Number(a.size||0),width:a.width??null,height:a.height??null,description:a.description||null})),
+    embeds:(m.embeds||[]).map(e=>e.toJSON?e.toJSON():e),
+    stickers:[...(m.stickers?.values?.()||[])].map(st=>({id:String(st.id),name:st.name,formatType:st.format})),
+    reactions:[...(m.reactions?.cache?.values?.()||[])].map(r=>({count:Number(r.count||0),me:Boolean(r.me),emoji:{id:r.emoji?.id||null,name:r.emoji?.name||null,animated:Boolean(r.emoji?.animated)}})),
+    mentions:[...(m.mentions?.users?.values?.()||[])].map(u=>({id:String(u.id),username:String(u.globalName||u.username||'Utilisateur'),avatar:u.displayAvatarURL?.({extension:'webp',size:128})||null})),
+    mentionRoles:[...(m.mentions?.roles?.keys?.()||[])].map(String),pinned:Boolean(m.pinned),tts:Boolean(m.tts),type:Number(m.type||0),
+    reference:m.reference?{messageId:m.reference.messageId||null,channelId:m.reference.channelId||null,guildId:m.reference.guildId||null}:null,
+    referencedMessage:m.reference&&m.reference.messageId&&m.channel?.messages?null:null,
+    contentIntentEnabled:process.env.DISCORD_MESSAGE_CONTENT==='true'
+  };
+}
+async function cmdMessages(guildId,channelId,before,limit=100){
+  const g=await cmdGuild(guildId);const ch=await g.channels.fetch(String(channelId||''));
+  if(!ch||String(ch.guildId||'')!==String(g.id)||!ch.isTextBased?.()||!ch.messages)throw Object.assign(new Error('Salon texte introuvable ou inaccessible'),{status:404});
+  const n=Math.max(1,Math.min(100,Number(limit)||100)),opts={limit:n};if(before&&/^\d{15,22}$/.test(String(before)))opts.before=String(before);
+  const rows=await ch.messages.fetch(opts);const arr=[...rows.values()];
+  return {channel:{id:ch.id,name:ch.name||ch.id,type:channelTypeLabel(ch.type),topic:'topic'in ch?(ch.topic||null):null,parentId:ch.parentId||null},messages:arr.map(cmdSerializeMessage),hasMore:arr.length===n,nextBefore:arr.length?arr[arr.length-1].id:null,contentIntentEnabled:process.env.DISCORD_MESSAGE_CONTENT==='true'};
+}
 function permissionObject(allow=[],deny=[]){
   const out={};
   for(const name of allow){if(!(name in PermissionFlagsBits))throw Object.assign(new Error('Permission Discord inconnue: '+name),{status:400});out[name]=true}
@@ -105,6 +129,12 @@ async function cmdAction(body){
     if(!target)throw Object.assign(new Error('Rôle ou membre introuvable'),{status:404});
     await ch.permissionOverwrites.edit(target,permissionObject(body.allow||[],body.deny||[]),{reason:'CMD Discord MCP'});
     return {ok:true,channelId:ch.id,targetId:String(body.targetId)};
+  }
+  if(action==='send_message'){
+    const ch=await g.channels.fetch(String(body.channelId||''));if(!ch||String(ch.guildId||'')!==String(g.id)||!ch.isTextBased?.())throw Object.assign(new Error('Salon texte introuvable ou inaccessible'),{status:404});
+    const content=String(body.content||'').trim().slice(0,2000);if(!content)throw Object.assign(new Error('Message vide'),{status:400});
+    const options={content,allowedMentions:{parse:['users','roles'],repliedUser:false}};if(body.replyTo&&/^\d{15,22}$/.test(String(body.replyTo)))options.reply={messageReference:String(body.replyTo),failIfNotExists:false};
+    const m=await ch.send(options);return {ok:true,message:cmdSerializeMessage(m),sentAsBot:true};
   }
   throw Object.assign(new Error('Action MCP inconnue'),{status:400});
 }
@@ -280,6 +310,7 @@ function buildDashboard() {
 
   app.get("/api/cmd-discord/guilds",cmdMcpGuard,async(req,res)=>{if(!client.isReady())return res.status(503).json({error:'Bot Discord non connecté'});res.json([...client.guilds.cache.values()].map(g=>({id:g.id,name:g.name,icon:g.iconURL({extension:'webp',size:128})||null,memberCount:g.memberCount||0})).sort((a,b)=>a.name.localeCompare(b.name,'fr')))});
   app.get("/api/cmd-discord/structure",cmdMcpGuard,async(req,res)=>res.json(await cmdStructure(req.query.guildId)));
+  app.get("/api/cmd-discord/messages",cmdMcpGuard,async(req,res)=>res.json(await cmdMessages(req.query.guildId,req.query.channelId,req.query.before||'',req.query.limit||100)));
   app.post("/api/cmd-discord/action",cmdMcpGuard,async(req,res)=>res.json(await cmdAction(req.body||{})));
 
   app.get("/api/public-config", async (req,res)=> {
