@@ -13,6 +13,7 @@ const topServers=require('./top-servers');
 const fileValidator=require('./file-validator');
 const community=require('./community');
 const {client}=require("./bot");
+const {ChannelType,PermissionFlagsBits}=require("discord.js");
 
 function verifyDiscordBridgeToken(token){
   const secret=String(process.env.DISCORD_BRIDGE_SECRET||'');
@@ -27,6 +28,85 @@ function verifyDiscordBridgeToken(token){
   if(data?.v!==1||!data?.user?.id||!Array.isArray(data.guilds)||Number(data.exp)<Date.now())throw Object.assign(new Error('Connexion Discord expirée'),{status:401});
   data.guilds=data.guilds.filter(g=>/^\d{15,22}$/.test(String(g.id||''))).slice(0,100).map(g=>({id:String(g.id),name:String(g.name||g.id).slice(0,100),icon:g.icon?'https://cdn.discordapp.com/icons/'+g.id+'/'+g.icon+'.webp?size=128':null,owner:Boolean(g.owner),permissions:String(g.permissions||'0'),installed:false,memberCount:0}));
   return data;
+}
+
+function cmdMcpGuard(req,res,next){
+  const secret=String(process.env.CMD_MCP_SECRET||'');
+  const supplied=String(req.get('x-cmd-mcp-secret')||'');
+  if(secret.length<32||supplied.length!==secret.length)return res.status(401).json({error:'Accès MCP refusé'});
+  const ok=crypto.timingSafeEqual(Buffer.from(supplied),Buffer.from(secret));
+  if(!ok)return res.status(401).json({error:'Accès MCP refusé'});
+  next();
+}
+const discordChannelTypes={text:ChannelType.GuildText,voice:ChannelType.GuildVoice,category:ChannelType.GuildCategory,announcement:ChannelType.GuildAnnouncement,forum:ChannelType.GuildForum};
+const channelTypeLabel=t=>Object.entries(discordChannelTypes).find(([,v])=>v===t)?.[0]||String(t);
+async function cmdGuild(id){
+  if(!client.isReady())throw Object.assign(new Error('Bot Discord non connecté'),{status:503});
+  const g=await client.guilds.fetch(String(id));
+  if(!g)throw Object.assign(new Error('Discord introuvable'),{status:404});
+  return g;
+}
+async function cmdStructure(id){
+  const g=await cmdGuild(id);await g.channels.fetch();await g.roles.fetch();
+  const me=await g.members.fetchMe().catch(()=>null);
+  return {
+    id:g.id,name:g.name,icon:g.iconURL({extension:'webp',size:128})||null,memberCount:g.memberCount||0,
+    bot:{id:client.user?.id||null,name:client.user?.username||null,highestRolePosition:me?.roles?.highest?.position??null},
+    channels:[...g.channels.cache.values()].map(ch=>({id:ch.id,name:ch.name,type:channelTypeLabel(ch.type),typeId:ch.type,parentId:ch.parentId||null,position:ch.rawPosition??ch.position??0,topic:'topic'in ch?(ch.topic||null):null})).sort((a,b)=>a.position-b.position||a.name.localeCompare(b.name,'fr')),
+    roles:[...g.roles.cache.values()].map(r=>({id:r.id,name:r.name,color:r.hexColor,position:r.position,hoist:r.hoist,mentionable:r.mentionable,managed:r.managed,permissions:r.permissions.bitfield.toString(),everyone:r.id===g.id})).sort((a,b)=>b.position-a.position)
+  };
+}
+function permissionObject(allow=[],deny=[]){
+  const out={};
+  for(const name of allow){if(!(name in PermissionFlagsBits))throw Object.assign(new Error('Permission Discord inconnue: '+name),{status:400});out[name]=true}
+  for(const name of deny){if(!(name in PermissionFlagsBits))throw Object.assign(new Error('Permission Discord inconnue: '+name),{status:400});out[name]=false}
+  return out;
+}
+async function cmdAction(body){
+  const g=await cmdGuild(body.guildId);const action=String(body.action||'');
+  if(action==='create_category'){
+    const ch=await g.channels.create({name:String(body.name||'Nouvelle catégorie').slice(0,100),type:ChannelType.GuildCategory,position:Number.isFinite(Number(body.position))?Number(body.position):undefined,reason:'CMD Discord MCP'});
+    return {ok:true,channel:{id:ch.id,name:ch.name,type:'category',position:ch.position}};
+  }
+  if(action==='create_channel'){
+    const type=discordChannelTypes[String(body.type||'text')];if(type===undefined)throw Object.assign(new Error('Type de salon invalide'),{status:400});
+    const ch=await g.channels.create({name:String(body.name||'nouveau-salon').slice(0,100),type,parent:body.parentId||undefined,topic:body.topic&&type===ChannelType.GuildText?String(body.topic).slice(0,1024):undefined,position:Number.isFinite(Number(body.position))?Number(body.position):undefined,reason:'CMD Discord MCP'});
+    return {ok:true,channel:{id:ch.id,name:ch.name,type:channelTypeLabel(ch.type),parentId:ch.parentId||null,position:ch.position}};
+  }
+  if(action==='update_channel'){
+    const ch=await g.channels.fetch(String(body.channelId||''));if(!ch)throw Object.assign(new Error('Salon introuvable'),{status:404});
+    const edit={reason:'CMD Discord MCP'};if(body.name!==undefined)edit.name=String(body.name).slice(0,100);if(body.parentId!==undefined)edit.parent=body.parentId||null;if(body.topic!==undefined&&'setTopic'in ch)edit.topic=body.topic?String(body.topic).slice(0,1024):null;
+    await ch.edit(edit);if(body.position!==undefined)await ch.setPosition(Number(body.position),{reason:'CMD Discord MCP'});
+    return {ok:true,channel:{id:ch.id,name:ch.name,parentId:ch.parentId||null,position:ch.position}};
+  }
+  if(action==='delete_channel'){
+    const ch=await g.channels.fetch(String(body.channelId||''));if(!ch)throw Object.assign(new Error('Salon introuvable'),{status:404});
+    const result={id:ch.id,name:ch.name};await ch.delete('CMD Discord MCP');return {ok:true,deleted:result};
+  }
+  if(action==='create_role'){
+    const opts={name:String(body.name||'Nouveau rôle').slice(0,100),hoist:Boolean(body.hoist),mentionable:Boolean(body.mentionable),reason:'CMD Discord MCP'};
+    if(body.color)opts.color=String(body.color);if(body.permissions!==undefined)opts.permissions=BigInt(String(body.permissions));
+    const role=await g.roles.create(opts);if(body.position!==undefined)await role.setPosition(Number(body.position),{reason:'CMD Discord MCP'});
+    return {ok:true,role:{id:role.id,name:role.name,color:role.hexColor,position:role.position}};
+  }
+  if(action==='update_role'){
+    const role=await g.roles.fetch(String(body.roleId||''));if(!role||role.id===g.id)throw Object.assign(new Error('Rôle introuvable ou protégé'),{status:404});
+    const opts={reason:'CMD Discord MCP'};if(body.name!==undefined)opts.name=String(body.name).slice(0,100);if(body.color!==undefined)opts.color=body.color?String(body.color):null;if(body.hoist!==undefined)opts.hoist=Boolean(body.hoist);if(body.mentionable!==undefined)opts.mentionable=Boolean(body.mentionable);if(body.permissions!==undefined)opts.permissions=BigInt(String(body.permissions));
+    await role.edit(opts);if(body.position!==undefined)await role.setPosition(Number(body.position),{reason:'CMD Discord MCP'});
+    return {ok:true,role:{id:role.id,name:role.name,color:role.hexColor,position:role.position}};
+  }
+  if(action==='delete_role'){
+    const role=await g.roles.fetch(String(body.roleId||''));if(!role||role.id===g.id)throw Object.assign(new Error('Rôle introuvable ou protégé'),{status:404});
+    const result={id:role.id,name:role.name};await role.delete('CMD Discord MCP');return {ok:true,deleted:result};
+  }
+  if(action==='set_channel_permissions'){
+    const ch=await g.channels.fetch(String(body.channelId||''));if(!ch)throw Object.assign(new Error('Salon introuvable'),{status:404});
+    const target=body.targetType==='member'?await g.members.fetch(String(body.targetId||'')):await g.roles.fetch(String(body.targetId||''));
+    if(!target)throw Object.assign(new Error('Rôle ou membre introuvable'),{status:404});
+    await ch.permissionOverwrites.edit(target,permissionObject(body.allow||[],body.deny||[]),{reason:'CMD Discord MCP'});
+    return {ok:true,channelId:ch.id,targetId:String(body.targetId)};
+  }
+  throw Object.assign(new Error('Action MCP inconnue'),{status:400});
 }
 
 function buildDashboard() {
@@ -197,6 +277,10 @@ function buildDashboard() {
     req.session.selectedGuildId=id;
     req.session.save(()=>res.json({ok:true,id,name:guild.name,icon:guild.iconURL({extension:'webp',size:128})||null}));
   });
+
+  app.get("/api/cmd-discord/guilds",cmdMcpGuard,async(req,res)=>{if(!client.isReady())return res.status(503).json({error:'Bot Discord non connecté'});res.json([...client.guilds.cache.values()].map(g=>({id:g.id,name:g.name,icon:g.iconURL({extension:'webp',size:128})||null,memberCount:g.memberCount||0})).sort((a,b)=>a.name.localeCompare(b.name,'fr')))});
+  app.get("/api/cmd-discord/structure",cmdMcpGuard,async(req,res)=>res.json(await cmdStructure(req.query.guildId)));
+  app.post("/api/cmd-discord/action",cmdMcpGuard,async(req,res)=>res.json(await cmdAction(req.body||{})));
 
   app.get("/api/public-config", async (req,res)=> {
     const clientId=process.env.DISCORD_CLIENT_ID||"";
