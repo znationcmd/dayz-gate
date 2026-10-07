@@ -80,6 +80,15 @@ async function cmdMessages(guildId,channelId,before,limit=100){
   const rows=await ch.messages.fetch(opts);const arr=[...rows.values()];
   return {channel:{id:ch.id,name:ch.name||ch.id,type:channelTypeLabel(ch.type),topic:'topic'in ch?(ch.topic||null):null,parentId:ch.parentId||null},messages:arr.map(cmdSerializeMessage),hasMore:arr.length===n,nextBefore:arr.length?arr[arr.length-1].id:null,contentIntentEnabled:process.env.DISCORD_MESSAGE_CONTENT==='true'};
 }
+
+function cmdSerializeWebhook(w){
+  const owner=w.owner||w.user||null;
+  return {id:String(w.id),guildId:w.guildId?String(w.guildId):null,channelId:w.channelId?String(w.channelId):null,name:String(w.name||'Webhook'),avatar:w.avatarURL?.({extension:'webp',size:128})||null,type:Number(w.type||1),creator:owner?{id:String(owner.id||''),username:String(owner.globalName||owner.username||owner.tag||'Discord')}:null};
+}
+async function cmdWebhooks(guildId){
+  const g=await cmdGuild(guildId);const rows=await g.fetchWebhooks();
+  return {guildId:g.id,webhooks:[...rows.values()].map(cmdSerializeWebhook).sort((a,b)=>a.name.localeCompare(b.name,'fr'))};
+}
 function permissionObject(allow=[],deny=[]){
   const out={};
   for(const name of allow){if(!(name in PermissionFlagsBits))throw Object.assign(new Error('Permission Discord inconnue: '+name),{status:400});out[name]=true}
@@ -311,6 +320,7 @@ function buildDashboard() {
   app.get("/api/cmd-discord/guilds",cmdMcpGuard,async(req,res)=>{if(!client.isReady())return res.status(503).json({error:'Bot Discord non connecté'});res.json([...client.guilds.cache.values()].map(g=>({id:g.id,name:g.name,icon:g.iconURL({extension:'webp',size:128})||null,memberCount:g.memberCount||0})).sort((a,b)=>a.name.localeCompare(b.name,'fr')))});
   app.get("/api/cmd-discord/structure",cmdMcpGuard,async(req,res)=>res.json(await cmdStructure(req.query.guildId)));
   app.get("/api/cmd-discord/messages",cmdMcpGuard,async(req,res)=>res.json(await cmdMessages(req.query.guildId,req.query.channelId,req.query.before||'',req.query.limit||100)));
+  app.get("/api/cmd-discord/webhooks",cmdMcpGuard,async(req,res)=>res.json(await cmdWebhooks(req.query.guildId)));
   app.post("/api/cmd-discord/action",cmdMcpGuard,async(req,res)=>res.json(await cmdAction(req.body||{})));
 
   app.get("/api/public-config", async (req,res)=> {
