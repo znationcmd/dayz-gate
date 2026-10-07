@@ -112,7 +112,11 @@ function mountMenu(authenticated=false){
    mobileStrip.hidden=!guilds.length;
    mobileStrip.innerHTML=guilds.length?`<strong>DISCORD</strong><div class="gate-mobile-guild-scroll">${bubbles}</div>`:'';
    const current=guilds.find(g=>g.id===selected)||guilds[0];
-   if(current){const ctx=side.querySelector('.gate-server-context');ctx.innerHTML=`${current.icon?`<img src="${esc(current.icon)}" alt="">`:`<div class="fallback">${esc(initials(current.name))}</div>`}<div><strong>${esc(current.name)}</strong><small>Bot installé · ${Number(current.memberCount||0)} membre(s)</small></div>`}
+   const config=await fetch('/api/public-config',{cache:'no-store'}).then(r=>r.json()).catch(()=>({}));
+   const invite=config.discordInviteUrl||'';
+   const ctx=side.querySelector('.gate-server-context');
+   if(current&&ctx)ctx.innerHTML=`${current.icon?`<img src="${esc(current.icon)}" alt="">`:`<div class="fallback">${esc(initials(current.name))}</div>`}<div><strong>${esc(current.name)}</strong><small>Bot installé · ${Number(current.memberCount||0)} membre(s)</small></div>${invite?`<a class="smallbtn red" href="${esc(invite)}" target="_blank" rel="noopener">＋ Inviter DAYZ GATE</a>`:''}`;
+   else if(ctx)ctx.innerHTML=`<div><strong>Mes Discord</strong><small>Aucun serveur installé sélectionné.</small></div>${invite?`<a class="smallbtn red" href="${esc(invite)}" target="_blank" rel="noopener">＋ Inviter DAYZ GATE</a>`:''}`;
    const bindGuilds=root=>root?.querySelectorAll('[data-guild]').forEach(b=>b.onclick=async()=>{await api('/api/guild/select',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:b.dataset.guild})});location.reload()});
    bindGuilds(rail);bindGuilds(mobileStrip);
   }).catch(()=>{});
