@@ -65,7 +65,7 @@ function mountMenu(authenticated=false){
   .gate-draft-grid i{display:block;width:13px;height:13px;border-radius:2px;background:#e36754}
   .gate-guild-rail{position:fixed;left:0;top:0;bottom:0;z-index:54;width:72px;padding:18px 8px;display:flex;flex-direction:column;align-items:center;gap:12px;background:#1f2327;border-right:1px solid #34393d;overflow-y:auto}
   .gate-guild-btn{width:52px;height:52px;min-height:52px;border-radius:50%;border:2px solid transparent;padding:0;overflow:hidden;background:#2b3136;color:white;display:grid;place-items:center;font-weight:800;font-size:12px}
-  .gate-guild-btn img{width:100%;height:100%;object-fit:cover}.gate-guild-btn.active{border-color:#e36754;box-shadow:0 0 0 3px #e3675422}.gate-guild-btn.active:before{content:'';position:fixed;left:0;width:4px;height:34px;background:#e36754;border-radius:0 3px 3px 0}
+  .gate-guild-btn img{width:100%;height:100%;object-fit:cover}.gate-guild-btn.active{border-color:#e36754;box-shadow:0 0 0 3px #e3675422}.gate-guild-btn.active:before{content:'';position:fixed;left:0;width:4px;height:34px;background:#e36754;border-radius:0 3px 3px 0}.gate-guild-btn.not-installed{opacity:.46;filter:grayscale(.72);border-style:dashed}.gate-guild-btn.not-installed:hover{opacity:.78;filter:grayscale(.35)}.gate-server-context.not-installed{opacity:.62}.gate-server-context.not-installed img,.gate-server-context.not-installed .fallback{filter:grayscale(.72);opacity:.65}
   .gate-side{position:fixed;left:72px;top:0;bottom:0;width:330px;z-index:53;display:flex;flex-direction:column;background:#303538;border-right:1px solid #3c4246;box-shadow:8px 0 22px #0004;overflow:hidden}
   .gate-side-top{padding:18px 20px 14px;border-bottom:1px solid #3c4246}
   .gate-server-context{display:flex;align-items:center;gap:11px;min-height:48px;margin-bottom:13px}.gate-server-context img,.gate-server-context .fallback{width:42px;height:42px;border-radius:50%;object-fit:cover;background:#22282c;display:grid;place-items:center;font-size:11px;font-weight:800}.gate-server-context strong{display:block;max-width:225px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px}.gate-server-context small{display:block;color:#8f989e;margin-top:2px;font-size:11px}
@@ -107,7 +107,7 @@ function mountMenu(authenticated=false){
    const guilds=Array.isArray(me.guilds)?me.guilds:[];
    const selected=me.selectedGuildId||me.guildId||guilds[0]?.id||'';
    const initials=n=>String(n||'?').split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase();
-   const bubbles=guilds.map(g=>`<button type="button" class="gate-guild-btn ${g.id===selected?'active':''}" data-guild="${esc(g.id)}" title="${esc(g.name)}">${g.icon?`<img src="${esc(g.icon)}" alt="">`:`<span>${esc(initials(g.name))}</span>`}</button>`).join('');
+   const bubbles=guilds.map(g=>{const installed=g.installed!==false;return `<button type="button" class="gate-guild-btn ${installed?'':'not-installed'} ${g.id===selected&&installed?'active':''}" data-guild="${esc(g.id)}" data-installed="${installed?'1':'0'}" title="${esc(g.name)}${installed?'':' · Bot non installé'}">${g.icon?`<img src="${esc(g.icon)}" alt="">`:`<span>${esc(initials(g.name))}</span>`}</button>`}).join('');
    rail.innerHTML=bubbles;
    mobileStrip.hidden=!guilds.length;
    mobileStrip.innerHTML=guilds.length?`<strong>DISCORD</strong><div class="gate-mobile-guild-scroll">${bubbles}</div>`:'';
@@ -115,9 +115,9 @@ function mountMenu(authenticated=false){
    const config=await fetch('/api/public-config',{cache:'no-store'}).then(r=>r.json()).catch(()=>({}));
    const invite=config.botInstallUrl||config.discordInviteUrl||'';
    const ctx=side.querySelector('.gate-server-context');
-   if(current&&ctx)ctx.innerHTML=`${current.icon?`<img src="${esc(current.icon)}" alt="">`:`<div class="fallback">${esc(initials(current.name))}</div>`}<div><strong>${esc(current.name)}</strong><small>Bot installé · ${Number(current.memberCount||0)} membre(s)</small></div>${invite?`<a class="smallbtn red" href="${esc(invite)}" target="_blank" rel="noopener">＋ Inviter DAYZ GATE</a>`:''}`;
+   if(current&&ctx){const installed=current.installed!==false;ctx.classList.toggle('not-installed',!installed);ctx.innerHTML=`${current.icon?`<img src="${esc(current.icon)}" alt="">`:`<div class="fallback">${esc(initials(current.name))}</div>`}<div><strong>${esc(current.name)}</strong><small>${installed?'Bot installé':'Bot non installé'} · ${Number(current.memberCount||0)} membre(s)</small></div>${invite?`<a class="smallbtn red" href="${esc(invite)}" target="_blank" rel="noopener">＋ Inviter DAYZ GATE</a>`:''}`};
    else if(ctx)ctx.innerHTML=`<div><strong>Mes Discord</strong><small>Aucun serveur installé sélectionné.</small></div>${invite?`<a class="smallbtn red" href="${esc(invite)}" target="_blank" rel="noopener">＋ Inviter DAYZ GATE</a>`:''}`;
-   const bindGuilds=root=>root?.querySelectorAll('[data-guild]').forEach(b=>b.onclick=async()=>{await api('/api/guild/select',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:b.dataset.guild})});location.reload()});
+   const bindGuilds=root=>root?.querySelectorAll('[data-guild]').forEach(b=>b.onclick=async()=>{if(b.dataset.installed==='0'){if(invite)window.open(invite,'_blank','noopener');return}await api('/api/guild/select',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:b.dataset.guild})});location.reload()});
    bindGuilds(rail);bindGuilds(mobileStrip);
   }).catch(()=>{});
  }
