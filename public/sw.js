@@ -1,5 +1,5 @@
-const CACHE='dayz-gate-v15-discord';
-const ASSETS=['/','/app.js?v=15','/help.js?v=15','/i18n.js?v=15','/ai-worker.js?v=15','/manifest-dayz-gate-2026.webmanifest','/dayz-gate-official-2026.svg','/dayz-tools.js?v=15'];
+const CACHE='dayz-gate-v16-menu';
+const ASSETS=['/','/app.js?v=16','/help.js?v=16','/i18n.js?v=16','/ai-worker.js?v=16','/manifest-dayz-gate-2026.webmanifest','/dayz-gate-official-2026.svg','/dayz-tools.js?v=16'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('dayz-gate-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('message',event=>{if(event.data&&event.data.type==='SKIP_WAITING')self.skipWaiting()});
