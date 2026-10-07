@@ -167,7 +167,7 @@ function buildDashboard() {
     }else if(loggedIn&&linked.length)guilds=linked.map(g=>({...g,installed:false,memberCount:0}));
     const preferred=req.session.selectedGuildId||req.session.guildId;
     const selected=(guilds.find(g=>String(g.id)===String(preferred)&&g.installed!==false)||guilds.find(g=>g.installed!==false))?.id||null;
-    res.json({ loggedIn,role:req.session.role||"owner",guildId:req.session.guildId||null,selectedGuildId:selected,guilds,discordLinked:Boolean(linked.length),discordAccountUrl:"/auth/discord-account" });
+    res.json({ loggedIn,role:req.session.role||"owner",guildId:req.session.guildId||null,selectedGuildId:selected,guilds,discordLinked:Boolean(req.session.discordAccountLinkedAt),discordAccountUrl:"/auth/discord-account" });
   });
   app.post("/api/guild/select", mustBeLoggedIn, async (req,res)=> {
     const id=String(req.body?.id||'');
