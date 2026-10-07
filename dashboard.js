@@ -145,7 +145,9 @@ function buildDashboard() {
   });
 
   app.get("/api/public-config", async (req,res)=> {
-    res.json({ discordInviteUrl: process.env.DISCORD_INVITE_URL || "" });
+    const clientId=process.env.DISCORD_CLIENT_ID||"";
+    const botInstallUrl=clientId?`https://discord.com/oauth2/authorize?client_id=${encodeURIComponent(clientId)}&permissions=268454928&integration_type=0&scope=bot%20applications.commands`:"";
+    res.json({ discordInviteUrl: process.env.DISCORD_INVITE_URL || "", botInstallUrl });
   });
 
   // ---------- NITRADO OAUTH ----------
