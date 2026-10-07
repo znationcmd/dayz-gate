@@ -313,12 +313,12 @@ function showDiscordModuleGate(main,key,label){
 
 function openMenuPage(key,label,authenticated){
  document.querySelector('.gate-menu-notice')?.remove();
+ if(key==='topservers'){location.href='https://cmd-top-serveur-production.up.railway.app/';return}
  if(!authenticated){if(key==='home'){window.scrollTo({top:0,behavior:'smooth'});return}showLogin(label);return}
  const main=document.querySelector('.main');window.approvedOnly=key==='players'||key==='shield';
  if(['messages','welcome','autoroles','verification','levels','invitations','reputation','tempvoice','infinity','suggestions','secureroles','moderation','automod','reports','giveaways','polls','embeds','snippets','social','recurring','statschannels','counters','birthdays','customcommands','wordreactions','starboard','reactionroles'].includes(key)){showDiscordModuleGate(main,key,label);return}
  if(key==='premium'){showPremiumGate(main);return}
  if(key==='radio'){showRadioGate(main);return}
- if(key==='topservers'){location.href='https://cmd-top-serveur-production.up.railway.app/';return}
  if(key==='tools'){showToolsGate(main);return}
  if(key==='validator'){showFileValidatorGate(main);return}
  if(['bank','rp','shop','tickets','lottery','minigames'].includes(key)){showCommunityGate(main,key);return}
