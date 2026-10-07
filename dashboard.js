@@ -356,6 +356,7 @@ function buildDashboard() {
   });
 
   app.get("/api/cmd-discord/guilds",cmdMcpGuard,async(req,res)=>{if(!client.isReady())return res.status(503).json({error:'Bot Discord non connecté'});res.json([...client.guilds.cache.values()].map(g=>({id:g.id,name:g.name,icon:g.iconURL({extension:'webp',size:128})||null,memberCount:g.memberCount||0})).sort((a,b)=>a.name.localeCompare(b.name,'fr')))});
+  app.get("/api/cmd-discord/invite",cmdMcpGuard,async(req,res)=>{const clientId=String(process.env.DISCORD_CLIENT_ID||client.user?.id||"");if(!clientId)return res.status(503).json({error:"Client ID Discord absent"});const url=String(process.env.DISCORD_INVITE_URL||"")||`https://discord.com/oauth2/authorize?client_id=${encodeURIComponent(clientId)}&permissions=268454928&integration_type=0&scope=bot%20applications.commands`;res.json({bot:"dayz",name:"DAYZ GATE",clientId,url})});
   app.get("/api/cmd-discord/structure",cmdMcpGuard,async(req,res)=>res.json(await cmdStructure(req.query.guildId)));
   app.get("/api/cmd-discord/messages",cmdMcpGuard,async(req,res)=>res.json(await cmdMessages(req.query.guildId,req.query.channelId,req.query.before||'',req.query.limit||100)));
   app.get("/api/cmd-discord/webhooks",cmdMcpGuard,async(req,res)=>res.json(await cmdWebhooks(req.query.guildId)));
