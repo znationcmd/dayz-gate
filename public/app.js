@@ -1,4 +1,3 @@
-if("serviceWorker"in navigator)navigator.serviceWorker.register("/sw.js");
 let deferredPrompt;const install=document.querySelector("#install");
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;if(install)install.hidden=false});
 if(install)install.onclick=async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;install.hidden=true};
@@ -345,7 +344,9 @@ body{animation:dayzBackgroundDrift 34s ease-in-out infinite;background-size:auto
 @media(prefers-reduced-motion:reduce){body{animation:none}}
 `;document.head.appendChild(gatePolish);
 
-let dayzGateReloading=false,dayzGateSw=null;
+let dayzGateSw=null;
+const DAYZ_PWA_VERSION='17';
+const DAYZ_RELOAD_KEY='dayz-pwa-reloaded-'+DAYZ_PWA_VERSION;
 async function forceDayzGateRefresh(){
  const btn=document.getElementById('dayz-force-refresh');if(btn){btn.disabled=true;btn.dataset.oldText=btn.textContent;btn.textContent='…'}
  try{
@@ -354,27 +355,11 @@ async function forceDayzGateRefresh(){
    await Promise.all(keys.filter(k=>k.startsWith('dayz-gate-')).map(k=>caches.delete(k)));
   }
   if('serviceWorker' in navigator){
-   dayzGateSw=dayzGateSw||await navigator.serviceWorker.getRegistration('/');
-   if(dayzGateSw){
-    await dayzGateSw.update();
-    if(dayzGateSw.waiting){
-     dayzGateSw.waiting.postMessage({type:'SKIP_WAITING'});
-     setTimeout(()=>location.reload(),900);
-     return;
-    }
-   }
+   dayzGateSw=await navigator.serviceWorker.register('/sw.js?v='+DAYZ_PWA_VERSION,{scope:'/',updateViaCache:'none'});
+   await dayzGateSw.update().catch(()=>{});
   }
-  location.reload();
- }catch{location.reload()}finally{if(btn){btn.disabled=false;btn.textContent=btn.dataset.oldText||'↻'}}
-}
-async function checkDayzGateUpdate(){
- if(!navigator.onLine||!('serviceWorker' in navigator))return;
- try{
-  dayzGateSw=dayzGateSw||await navigator.serviceWorker.getRegistration('/');
-  if(!dayzGateSw)return;
-  await dayzGateSw.update();
-  if(dayzGateSw.waiting)dayzGateSw.waiting.postMessage({type:'SKIP_WAITING'});
  }catch{}
+ location.reload();
 }
 function mountDayzRefreshButton(){
  if(document.getElementById('dayz-force-refresh'))return;
@@ -383,21 +368,20 @@ function mountDayzRefreshButton(){
  b.onclick=forceDayzGateRefresh;document.body.appendChild(b);
 }
 if('serviceWorker' in navigator){
- navigator.serviceWorker.addEventListener('controllerchange',()=>{if(dayzGateReloading)return;dayzGateReloading=true;location.reload()});
+ navigator.serviceWorker.addEventListener('controllerchange',()=>{
+  try{
+   if(sessionStorage.getItem(DAYZ_RELOAD_KEY)==='1')return;
+   sessionStorage.setItem(DAYZ_RELOAD_KEY,'1');
+  }catch{}
+  location.reload();
+ });
  window.addEventListener('load',async()=>{
   mountDayzRefreshButton();
   try{
-   dayzGateSw=await navigator.serviceWorker.register('/sw.js?v=16',{scope:'/',updateViaCache:'none'});
-   dayzGateSw.addEventListener('updatefound',()=>{
-    const sw=dayzGateSw.installing;if(!sw)return;
-    sw.addEventListener('statechange',()=>{if(sw.state==='installed'&&navigator.serviceWorker.controller)sw.postMessage({type:'SKIP_WAITING'})});
-   });
-   await dayzGateSw.update();
+   dayzGateSw=await navigator.serviceWorker.register('/sw.js?v='+DAYZ_PWA_VERSION,{scope:'/',updateViaCache:'none'});
+   await dayzGateSw.update().catch(()=>{});
   }catch{}
  });
- document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkDayzGateUpdate()});
- window.addEventListener('focus',checkDayzGateUpdate);
- setInterval(checkDayzGateUpdate,10*60*1000);
 }else window.addEventListener('load',mountDayzRefreshButton);
 window.forceDayzGateRefresh=forceDayzGateRefresh;
 
