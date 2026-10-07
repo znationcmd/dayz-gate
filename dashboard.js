@@ -89,6 +89,44 @@ async function cmdWebhooks(guildId){
   const g=await cmdGuild(guildId);const rows=await g.fetchWebhooks();
   return {guildId:g.id,webhooks:[...rows.values()].map(cmdSerializeWebhook).sort((a,b)=>a.name.localeCompare(b.name,'fr'))};
 }
+
+function cmdPlain(v){
+  try{return JSON.parse(JSON.stringify(v,(k,x)=>typeof x==='bigint'?x.toString():x))}catch{return null}
+}
+function cmdIntegrationRow(i){
+  const app=i.application||null,user=i.user||null;
+  return {id:String(i.id||''),name:String(i.name||''),type:String(i.type||''),enabled:i.enabled!==false,roleId:i.role?.id||i.roleId||null,
+    user:user?{id:String(user.id||''),username:String(user.globalName||user.username||user.tag||'Utilisateur'),bot:Boolean(user.bot)}:null,
+    application:app?{id:String(app.id||''),name:String(app.name||''),bot:app.bot?{id:String(app.bot.id||''),username:String(app.bot.username||''),avatar:app.bot.displayAvatarURL?.({extension:'webp',size:128})||null}:null}:null,
+    scopes:Array.isArray(i.scopes)?i.scopes:[]};
+}
+async function cmdThreadSnapshot(g){
+  const by=new Map();
+  try{const active=await g.channels.fetchActiveThreads();for(const t of active.threads.values())by.set(t.id,t)}catch{}
+  return [...by.values()].map(t=>({id:String(t.id),name:String(t.name||t.id),type:'thread',typeId:t.type,parentId:t.parentId||null,ownerId:t.ownerId||null,
+    archived:Boolean(t.archived),locked:Boolean(t.locked),autoArchiveDuration:t.autoArchiveDuration??null,createdTimestamp:t.createdTimestamp||null,archiveTimestamp:t.archiveTimestamp||null}));
+}
+async function cmdExtras(guildId){
+  const g=await cmdGuild(guildId);await g.fetch().catch(()=>{});
+  const errors={};const take=async(name,fn,fallback)=>{try{return await fn()}catch(e){errors[name]=e.message;return fallback}};
+  const integrations=await take('integrations',async()=>[...(await g.fetchIntegrations()).values()].map(cmdIntegrationRow),[]);
+  const botIds=[...new Set(integrations.flatMap(i=>[i.user?.bot&&i.user?.id,i.application?.bot?.id]).filter(Boolean).map(String))];
+  const bots=[];
+  for(const id of botIds){
+    const m=await g.members.fetch(id).catch(()=>null);if(!m)continue;
+    bots.push({id:String(id),username:String(m.user?.globalName||m.user?.username||id),avatar:m.user?.displayAvatarURL?.({extension:'webp',size:128})||null,nickname:m.nickname||null,
+      roles:[...m.roles.cache.values()].map(r=>({id:String(r.id),name:r.name,position:r.position})),permissions:m.permissions?.bitfield?.toString?.()||null});
+  }
+  const autoModeration=await take('autoModeration',async()=>[...(await g.autoModerationRules.fetch()).values()].map(x=>cmdPlain(x.toJSON?x.toJSON():x)),[]);
+  const scheduledEvents=await take('scheduledEvents',async()=>[...(await g.scheduledEvents.fetch()).values()].map(x=>cmdPlain(x.toJSON?x.toJSON():x)),[]);
+  const emojis=await take('emojis',async()=>[...(await g.emojis.fetch()).values()].map(e=>({id:String(e.id),name:e.name,animated:Boolean(e.animated),url:e.imageURL?.({extension:e.animated?'gif':'webp',size:128})||null})),[]);
+  const stickers=await take('stickers',async()=>[...(await g.stickers.fetch()).values()].map(st=>({id:String(st.id),name:st.name,description:st.description||null,tags:st.tags||null,format:Number(st.format),url:st.url||null})),[]);
+  const threads=await take('threads',async()=>await cmdThreadSnapshot(g),[]);
+  return {guild:{id:g.id,name:g.name,description:g.description||null,icon:g.iconURL({extension:'webp',size:256})||null,banner:g.bannerURL?.({extension:'webp',size:1024})||null,splash:g.splashURL?.({extension:'webp',size:1024})||null,
+    ownerId:g.ownerId||null,memberCount:g.memberCount||0,verificationLevel:Number(g.verificationLevel||0),preferredLocale:g.preferredLocale||null,premiumTier:Number(g.premiumTier||0),features:[...(g.features||[])]},
+    integrations,bots,autoModeration,scheduledEvents,emojis,stickers,threads,errors};
+}
+
 function permissionObject(allow=[],deny=[]){
   const out={};
   for(const name of allow){if(!(name in PermissionFlagsBits))throw Object.assign(new Error('Permission Discord inconnue: '+name),{status:400});out[name]=true}
@@ -321,6 +359,7 @@ function buildDashboard() {
   app.get("/api/cmd-discord/structure",cmdMcpGuard,async(req,res)=>res.json(await cmdStructure(req.query.guildId)));
   app.get("/api/cmd-discord/messages",cmdMcpGuard,async(req,res)=>res.json(await cmdMessages(req.query.guildId,req.query.channelId,req.query.before||'',req.query.limit||100)));
   app.get("/api/cmd-discord/webhooks",cmdMcpGuard,async(req,res)=>res.json(await cmdWebhooks(req.query.guildId)));
+  app.get("/api/cmd-discord/extras",cmdMcpGuard,async(req,res)=>res.json(await cmdExtras(req.query.guildId)));
   app.post("/api/cmd-discord/action",cmdMcpGuard,async(req,res)=>res.json(await cmdAction(req.body||{})));
 
   app.get("/api/public-config", async (req,res)=> {
