@@ -103,7 +103,7 @@ function mountMenu(authenticated=false){
  const search=side.querySelector('.gate-module-search');search.oninput=()=>{const q=search.value.trim().toLowerCase();side.querySelectorAll('[data-page]').forEach(b=>b.hidden=!!q&&!b.dataset.search.includes(q));side.querySelectorAll('[data-group]').forEach(g=>g.hidden=![...g.querySelectorAll('[data-page]')].some(b=>!b.hidden))};
  document.body.prepend(shade,side,rail,mobileStrip,header);
  if(authenticated){
-  api('/api/me').then(me=>{
+  api('/api/me').then(async me=>{
    const guilds=Array.isArray(me.guilds)?me.guilds:[];
    const selected=me.selectedGuildId||me.guildId||guilds[0]?.id||'';
    const initials=n=>String(n||'?').split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase();
@@ -115,7 +115,7 @@ function mountMenu(authenticated=false){
    const config=await fetch('/api/public-config',{cache:'no-store'}).then(r=>r.json()).catch(()=>({}));
    const invite=config.botInstallUrl||config.discordInviteUrl||'';
    const ctx=side.querySelector('.gate-server-context');
-   if(current&&ctx){const installed=current.installed!==false;ctx.classList.toggle('not-installed',!installed);ctx.innerHTML=`${current.icon?`<img src="${esc(current.icon)}" alt="">`:`<div class="fallback">${esc(initials(current.name))}</div>`}<div><strong>${esc(current.name)}</strong><small>${installed?'Bot installé':'Bot non installé'} · ${Number(current.memberCount||0)} membre(s)</small></div>${invite?`<a class="smallbtn red" href="${esc(invite)}" target="_blank" rel="noopener">＋ Inviter DAYZ GATE</a>`:''}`};
+   if(current&&ctx){const installed=current.installed!==false;ctx.classList.toggle('not-installed',!installed);ctx.innerHTML=`${current.icon?`<img src="${esc(current.icon)}" alt="">`:`<div class="fallback">${esc(initials(current.name))}</div>`}<div><strong>${esc(current.name)}</strong><small>${installed?'Bot installé':'Bot non installé'} · ${Number(current.memberCount||0)} membre(s)</small></div>${invite?`<a class="smallbtn red" href="${esc(invite)}" target="_blank" rel="noopener">＋ Inviter DAYZ GATE</a>`:''}`}
    else if(ctx)ctx.innerHTML=`<div><strong>Mes Discord</strong><small>Aucun serveur installé sélectionné.</small></div>${invite?`<a class="smallbtn red" href="${esc(invite)}" target="_blank" rel="noopener">＋ Inviter DAYZ GATE</a>`:''}`;
    const bindGuilds=root=>root?.querySelectorAll('[data-guild]').forEach(b=>b.onclick=async()=>{if(b.dataset.installed==='0'){if(invite)window.open(invite,'_blank','noopener');return}await api('/api/guild/select',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:b.dataset.guild})});location.reload()});
    bindGuilds(rail);bindGuilds(mobileStrip);
@@ -387,7 +387,7 @@ if('serviceWorker' in navigator){
  window.addEventListener('load',async()=>{
   mountDayzRefreshButton();
   try{
-   dayzGateSw=await navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'});
+   dayzGateSw=await navigator.serviceWorker.register('/sw.js?v=16',{scope:'/',updateViaCache:'none'});
    dayzGateSw.addEventListener('updatefound',()=>{
     const sw=dayzGateSw.installing;if(!sw)return;
     sw.addEventListener('statechange',()=>{if(sw.state==='installed'&&navigator.serviceWorker.controller)sw.postMessage({type:'SKIP_WAITING'})});
