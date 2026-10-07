@@ -367,7 +367,7 @@ body{animation:dayzBackgroundDrift 34s ease-in-out infinite;background-size:auto
 `;document.head.appendChild(gatePolish);
 
 let dayzGateSw=null;
-const DAYZ_PWA_VERSION='20';
+const DAYZ_PWA_VERSION='21';
 const DAYZ_RELOAD_KEY='dayz-pwa-reloaded-'+DAYZ_PWA_VERSION;
 async function forceDayzGateRefresh(){
  const btn=document.getElementById('dayz-force-refresh');if(btn){btn.disabled=true;btn.dataset.oldText=btn.textContent;btn.textContent='…'}
