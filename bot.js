@@ -4,7 +4,7 @@ const crypto=require("crypto");
 const community=require("./community");
 const discordTools=require("./discord-tools");
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const dayzIntents=[GatewayIntentBits.Guilds,GatewayIntentBits.GuildMessages];if(process.env.DISCORD_MESSAGE_CONTENT==='true')dayzIntents.push(GatewayIntentBits.MessageContent);const client = new Client({ intents: dayzIntents });
 
 client.once("ready", () => console.log(`Bot connecté : ${client.user.tag} | ${client.guilds.cache.size} serveur(s)`));
 
