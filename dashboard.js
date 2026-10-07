@@ -14,6 +14,21 @@ const fileValidator=require('./file-validator');
 const community=require('./community');
 const {client}=require("./bot");
 
+function verifyDiscordBridgeToken(token){
+  const secret=String(process.env.DISCORD_BRIDGE_SECRET||'');
+  if(secret.length<32)throw Object.assign(new Error('Passerelle Discord non configurée'),{status:503});
+  const parts=String(token||'').split('.');
+  if(parts.length!==2)throw Object.assign(new Error('Connexion Discord invalide'),{status:401});
+  const [payload,sig]=parts;
+  const expected=crypto.createHmac('sha256',secret).update(payload).digest('base64url');
+  const a=Buffer.from(sig),b=Buffer.from(expected);
+  if(a.length!==b.length||!crypto.timingSafeEqual(a,b))throw Object.assign(new Error('Connexion Discord invalide'),{status:401});
+  let data;try{data=JSON.parse(Buffer.from(payload,'base64url').toString('utf8'))}catch{throw Object.assign(new Error('Connexion Discord invalide'),{status:401})}
+  if(data?.v!==1||!data?.user?.id||!Array.isArray(data.guilds)||Number(data.exp)<Date.now())throw Object.assign(new Error('Connexion Discord expirée'),{status:401});
+  data.guilds=data.guilds.filter(g=>/^\d{15,22}$/.test(String(g.id||''))).slice(0,100).map(g=>({id:String(g.id),name:String(g.name||g.id).slice(0,100),icon:g.icon?'https://cdn.discordapp.com/icons/'+g.id+'/'+g.icon+'.webp?size=128':null,owner:Boolean(g.owner),permissions:String(g.permissions||'0'),installed:false,memberCount:0}));
+  return data;
+}
+
 function buildDashboard() {
   const scopeId=req=>req.session.selectedGuildId||req.session.guildId||'owner';
   const app = express();
@@ -109,13 +124,37 @@ function buildDashboard() {
     req.session.destroy(() => res.json({ ok: true }));
   });
 
+  app.get("/auth/discord-account", async (req,res)=> {
+    if(!req.session?.admin)return res.redirect("/");
+    try{
+      const bridge=new URL(process.env.DISCORD_ACCOUNT_BRIDGE_URL||"https://dashboard-production-e07b.up.railway.app/api/mod-auth/login");
+      bridge.searchParams.set("bridge",req.protocol+"://"+req.get("host"));
+      res.redirect(bridge.toString());
+    }catch{return res.redirect("/")}
+  });
+  app.get("/auth/discord-bridge", async (req,res)=> {
+    if(!req.session?.admin)return res.redirect("/");
+    try{
+      const data=verifyDiscordBridgeToken(req.query.token);
+      if(req.session.authMethod==='discord'&&req.session.discordUserId&&String(req.session.discordUserId)!==String(data.user.id))return res.status(403).send('Compte Discord différent de la session.');
+      req.session.discordAccountUserId=String(data.user.id);
+      req.session.discordAccountName=String(data.user.name||"Discord").slice(0,100);
+      req.session.discordAccountGuilds=data.guilds;
+      req.session.discordAccountLinkedAt=Date.now();
+      req.session.save(()=>res.redirect("/"));
+    }catch(e){res.status(e.status||401).send(e.message||"Connexion Discord invalide")}
+  });
   app.get("/api/me", async (req,res)=> {
     const active=req.session.role!=="founder"||req.session.authMethod==="discord"||Boolean((await db.prepare("SELECT id FROM founder_accounts WHERE id=? AND active=1").get(req.session.accountId)));
     const loggedIn=Boolean(req.session?.admin)&&active;
     let guilds=[];
+    const linked=loggedIn&&Array.isArray(req.session.discordAccountGuilds)&&req.session.discordAccountGuilds.length?req.session.discordAccountGuilds:[];
     if(loggedIn&&client.isReady()){
       const installed=[...client.guilds.cache.values()].map(g=>({id:g.id,name:g.name,icon:g.iconURL({extension:'webp',size:128})||null,ownerId:g.ownerId,memberCount:g.memberCount||0,installed:true})).sort((a,b)=>a.name.localeCompare(b.name,'fr'));
-      if(req.session.role==='owner')guilds=installed;
+      if(linked.length&&(req.session.role==='owner'||!req.session.discordUserId||String(req.session.discordUserId)===String(req.session.discordAccountUserId))){
+        const live=new Map(installed.map(g=>[String(g.id),g]));
+        guilds=linked.map(g=>live.has(String(g.id))?{...g,...live.get(String(g.id)),installed:true}:{...g,installed:false,memberCount:0}).sort((a,b)=>a.name.localeCompare(b.name,'fr'));
+      }else if(req.session.role==='owner')guilds=installed;
       else if(req.session.authMethod==='discord'&&req.session.discordUserId){
         for(const g of installed){
           try{
@@ -125,9 +164,10 @@ function buildDashboard() {
           }catch{}
         }
       }else guilds=installed.filter(g=>g.id===(req.session.selectedGuildId||req.session.guildId));
-    }
-    const selected=req.session.selectedGuildId||req.session.guildId||guilds[0]?.id||null;
-    res.json({ loggedIn,role:req.session.role||"owner",guildId:req.session.guildId||null,selectedGuildId:selected,guilds });
+    }else if(loggedIn&&linked.length)guilds=linked.map(g=>({...g,installed:false,memberCount:0}));
+    const preferred=req.session.selectedGuildId||req.session.guildId;
+    const selected=(guilds.find(g=>String(g.id)===String(preferred)&&g.installed!==false)||guilds.find(g=>g.installed!==false))?.id||null;
+    res.json({ loggedIn,role:req.session.role||"owner",guildId:req.session.guildId||null,selectedGuildId:selected,guilds,discordLinked:Boolean(linked.length),discordAccountUrl:"/auth/discord-account" });
   });
   app.post("/api/guild/select", mustBeLoggedIn, async (req,res)=> {
     const id=String(req.body?.id||'');
