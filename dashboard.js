@@ -64,7 +64,10 @@ function buildDashboard() {
   const mustBeLoggedIn = async (req, res, next) => {
     if (req.session?.admin) {
       if(req.session.authMethod==='discord'&&Date.now()-(req.session.discordVerifiedAt||0)>60000){
-        try{const guild=await client.guilds.fetch(req.session.guildId);const member=await guild.members.fetch(req.session.discordUserId);if(guild.ownerId!==req.session.discordUserId&&!member.permissions.has(32n)&&!member.permissions.has(8n))throw Error('Droits retirés');req.session.discordVerifiedAt=Date.now()}catch{return res.status(403).json({error:'Droits fondateur Discord requis'})}
+        const targetGuild=req.session.selectedGuildId||req.session.guildId;
+        if(targetGuild){
+          try{const guild=await client.guilds.fetch(targetGuild);const member=await guild.members.fetch(req.session.discordUserId);if(guild.ownerId!==req.session.discordUserId&&!member.permissions.has(32n)&&!member.permissions.has(8n))throw Error('Droits retirés');req.session.discordVerifiedAt=Date.now()}catch{return res.status(403).json({error:'Droits fondateur Discord requis'})}
+        }
       }
       if(req.session.role==='founder'&&req.session.authMethod!=='discord'&&!(await db.prepare("SELECT id FROM founder_accounts WHERE id=? AND active=1").get(req.session.accountId)))return res.status(401).json({error:"Compte désactivé"});
       return next();
@@ -125,7 +128,6 @@ function buildDashboard() {
   });
 
   app.get("/auth/discord-account", async (req,res)=> {
-    if(!req.session?.admin)return res.redirect("/");
     try{
       const bridge=new URL(process.env.DISCORD_ACCOUNT_BRIDGE_URL||"https://dashboard-production-e07b.up.railway.app/api/mod-auth/login");
       bridge.searchParams.set("bridge",req.protocol+"://"+req.get("host"));
@@ -133,14 +135,26 @@ function buildDashboard() {
     }catch{return res.redirect("/")}
   });
   app.get("/auth/discord-bridge", async (req,res)=> {
-    if(!req.session?.admin)return res.redirect("/");
     try{
       const data=verifyDiscordBridgeToken(req.query.token);
       if(req.session.authMethod==='discord'&&req.session.discordUserId&&String(req.session.discordUserId)!==String(data.user.id))return res.status(403).send('Compte Discord différent de la session.');
+      const installed=client.isReady()?[...client.guilds.cache.values()]:[];
+      const manageable=new Set(data.guilds.map(g=>String(g.id)));
+      const firstInstalled=installed.find(g=>manageable.has(String(g.id)))||null;
+      if(!req.session?.admin)await new Promise((resolve,reject)=>req.session.regenerate(e=>e?reject(e):resolve()));
+      req.session.admin=true;
+      req.session.role=req.session.role==='owner'?'owner':'founder';
+      req.session.authMethod='discord';
+      req.session.discordUserId=String(data.user.id);
+      req.session.discordVerifiedAt=Date.now();
       req.session.discordAccountUserId=String(data.user.id);
       req.session.discordAccountName=String(data.user.name||"Discord").slice(0,100);
       req.session.discordAccountGuilds=data.guilds;
       req.session.discordAccountLinkedAt=Date.now();
+      if(firstInstalled){
+        req.session.guildId=firstInstalled.id;
+        req.session.selectedGuildId=firstInstalled.id;
+      }
       req.session.save(()=>res.redirect("/"));
     }catch(e){res.status(e.status||401).send(e.message||"Connexion Discord invalide")}
   });
