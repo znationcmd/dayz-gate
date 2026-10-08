@@ -363,6 +363,21 @@ const gatePolish=document.createElement('style');gatePolish.textContent=`
 @keyframes dayzBackgroundDrift{0%{background-position:center center}50%{background-position:53% 46%}100%{background-position:center center}}
 body{animation:dayzBackgroundDrift 34s ease-in-out infinite;background-size:auto,112% 112%!important;background-attachment:fixed}
 @media(max-width:800px){.shell,.main{padding-top:calc(132px + env(safe-area-inset-top,0px))!important}.gate-toggle{top:calc(12px + env(safe-area-inset-top,0px))}.reference-top{position:absolute;top:calc(72px + env(safe-area-inset-top,0px));left:14px;right:14px;height:48px!important;display:flex!important;align-items:center!important;gap:8px!important}.reference-top .reference-search{display:none}.reference-account{flex:1;justify-content:center;min-height:46px}.gate-language{min-height:46px!important}.gate-side{padding-top:calc(54px + env(safe-area-inset-top,0px))!important}}
+
+/* Make both Logout and Language visible below the pinned Discord/server rail. */
+@media(max-width:800px){
+ .shell,.shell.main{padding-top:calc(135px + env(safe-area-inset-top,0px))!important}
+ .reference-top{position:relative!important;top:auto!important;left:auto!important;right:auto!important;
+   width:100%!important;height:auto!important;min-height:52px!important;display:grid!important;
+   grid-template-columns:minmax(0,1fr) minmax(112px,145px)!important;
+   gap:8px!important;margin:0 0 14px!important;padding:0!important;z-index:5!important}
+ .reference-top .reference-account{width:100%!important;min-width:0!important;max-width:100%!important;
+   min-height:46px!important;display:flex!important;align-items:center;justify-content:center;overflow:hidden}
+ .reference-top .gate-language{position:static!important;min-width:0!important;width:100%!important;
+   max-width:100%!important;min-height:46px!important;margin:0!important;display:block!important}
+ .reference-top .reference-search{display:none!important}
+ .gate-discord{z-index:3}
+}
 @media(prefers-reduced-motion:reduce){body{animation:none}}
 `;document.head.appendChild(gatePolish);
 
