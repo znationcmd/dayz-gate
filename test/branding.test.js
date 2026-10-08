@@ -23,12 +23,14 @@ test('the phone header logo remains centered after zooming',()=>{
 test('new icons and responsive JS invalidate the previous installed PWA cache',()=>{
   const html=read('public/index.html');
   const sw=read('public/sw.js');
-  for(const asset of ['/app.js','/i18n.js','/dayz-gate-official-2026.svg']){
-    const found=html.match(new RegExp(asset.replace(/\\./g,'\\\\.')+'(?:\\\\?v=\\\\d+)?'));
-    assert.ok(found,'Asset missing from HTML: '+asset);
-    assert.ok(sw.includes(found[0]),'Service worker caches the wrong version: '+asset);
-  }
-  assert.match(sw,/dayz-gate-v\\d+-[\\w-]+/);
+  const requested=[
+    html.match(/\/app\.js\?v=\d+/)?.[0],
+    html.match(/\/i18n\.js\?v=\d+/)?.[0],
+    html.match(/\/dayz-gate-official-2026\.svg\?v=\d+/)?.[0]
+  ];
+  assert.ok(requested.every(Boolean),'A versioned JS/icon asset is absent from HTML');
+  requested.forEach(asset=>assert.ok(sw.includes(asset),'Outdated PWA cache: '+asset));
+  assert.match(sw,/dayz-gate-v[0-9]+-[a-z0-9-]+/i);
 });
 
 test('DayZ Gate keeps eleven languages including Corsican',()=>{
