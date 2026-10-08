@@ -1,6 +1,6 @@
 {
-  "name": "DayZ Gate",
-  "short_name": "DayZ Gate",
+  "name": "CMD DayZ Gate",
+  "short_name": "CMD DayZ Gate",
   "description": "Compagnon DayZ : Discord, whitelist et Nitrado",
   "start_url": "/",
   "scope": "/",
@@ -9,7 +9,7 @@
   "theme_color": "#050505",
   "icons": [
     {
-      "src": "/dayz-gate-icon.svg?v=3",
+      "src": "/dayz-gate-official-2026.svg?v=20261008",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
