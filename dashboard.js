@@ -7,7 +7,8 @@ const db = require("./db");
 const { grantWhitelistRole, removeWhitelistRole } = require("./bot");
 const nitrado = require("./nitrado");
 const founders=require("./founders");
-const isVerifiedCmdCofounder=(id)=>/^\d{15,22}$/.test(String(id||''))&&String(process.env.CMD_FOUNDER_DISCORD_IDS||'').split(/[\s,;]+/).includes(String(id));
+// Preserve the primary Railway founders, and always recognize the secondary Discord founder.
+const isVerifiedCmdCofounder=(id)=>{const value=String(id||'');return /^\d{15,22}$/.test(value)&&new Set(['1397096854159622285',...String(process.env.CMD_FOUNDER_DISCORD_IDS||'').split(/[\s,;]+/)]).has(value);};
 const radio=require('./radio');
 const premium=require('./premium');
 const topServers=require('./top-servers');
