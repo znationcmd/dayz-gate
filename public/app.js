@@ -1,3 +1,15 @@
+function cmdDayzGuildIcon(g){
+ const icon=String(g?.icon||"").trim(),id=String(g?.id||"");
+ if(/^https:\/\//i.test(icon)||/^\/[^/]/.test(icon)||/^data:image\/(png|jpeg|webp|gif);base64,/i.test(icon))return icon;
+ if(/^\d{15,22}$/.test(id)&&/^[a-zA-Z0-9_]{5,60}$/.test(icon))return "https://cdn.discordapp.com/icons/"+id+"/"+icon+".webp?size=256";
+ return "";
+}
+document.addEventListener("error",event=>{
+ const img=event.target;
+ if(!(img instanceof HTMLImageElement)||!img.closest(".gate-guild-btn"))return;
+ img.hidden=true;
+ img.closest(".gate-guild-btn")?.classList.add("cmd-dayz-logo-unavailable");
+},true);
 let deferredPrompt;const install=document.querySelector("#install");
 window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;if(install)install.hidden=false});
 if(install)install.onclick=async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;install.hidden=true};
@@ -109,7 +121,7 @@ function mountMenu(authenticated=false){
    const guilds=Array.isArray(me.guilds)?me.guilds:[];
    const selected=me.selectedGuildId||me.guildId||guilds.find(g=>g.installed!==false)?.id||guilds[0]?.id||'';
    const initials=n=>String(n||'?').split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase();
-   const bubbles=guilds.map(g=>{const installed=g.installed!==false;return `<button type="button" class="gate-guild-btn ${installed?'':'not-installed'} ${g.id===selected&&installed?'active':''}" data-guild="${esc(g.id)}" data-installed="${installed?'1':'0'}" title="${esc(g.name)}${installed?'':' · Bot non installé · Cliquer pour inviter'}">${g.icon?`<img src="${esc(g.icon)}" alt="">`:`<span>${esc(initials(g.name))}</span>`}</button>`}).join('');
+   const bubbles=guilds.map(g=>{const installed=g.installed!==false;return `<button type="button" class="gate-guild-btn ${installed?'':'not-installed'} ${g.id===selected&&installed?'active':''}" data-guild="${esc(g.id)}" data-installed="${installed?'1':'0'}" title="${esc(g.name)}${installed?'':' · Bot non installé · Cliquer pour inviter'}">${cmdDayzGuildIcon(g)?`<img src="${esc(cmdDayzGuildIcon(g))}" alt="${esc(g.name)}">`:""}<span class="cmd-dayz-guild-fallback">${esc(initials(g.name))}</span></button>`}).join('');
    rail.innerHTML=bubbles;
    mobileStrip.hidden=!guilds.length;
    mobileStrip.innerHTML=guilds.length?`<strong>DISCORD</strong><div class="gate-mobile-guild-scroll">${bubbles}</div>`:'';
@@ -443,3 +455,11 @@ const gateMobileGuildStyle=document.createElement('style');gateMobileGuildStyle.
 `;document.head.appendChild(gateMobileGuildStyle);
 
 ;(function(){if(document.getElementById('cmd-dayz-round-logos'))return;const el=document.createElement('style');el.id='cmd-dayz-round-logos';el.textContent=".gate-draft-header>img,.gate-draft-header img[src*=\"icon.svg\"],.gate-draft-header img[src*=\"dayz-gate-official\"]{width:66px!important;height:66px!important;max-width:66px!important;aspect-ratio:1/1!important;border-radius:50%!important;clip-path:circle(50% at 50% 50%)!important;object-fit:cover!important;object-position:center!important;transform:translateX(-50%) scale(1.065)!important;flex:none!important;background:transparent!important}\n.brand .mark{border-radius:50%!important;overflow:hidden!important;aspect-ratio:1/1!important}\n.brand .mark img{width:100%!important;height:100%!important;border-radius:50%!important;object-fit:cover!important;object-position:center!important;transform:scale(1.08)!important}\n@media(max-width:560px){.gate-draft-header>img,.gate-draft-header img[src*=\"icon.svg\"]{width:56px!important;height:56px!important;max-width:56px!important}}";document.head.appendChild(el)})();
+
+;(()=>{const el=document.createElement('style');el.id='cmd-dayz-guild-logo-rescue';el.textContent=`
+.gate-guild-btn{position:relative!important;border-radius:50%!important;overflow:hidden!important;isolation:isolate}
+.gate-guild-btn>img{display:block!important;position:absolute!important;inset:0!important;width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;object-fit:cover!important;object-position:center!important;border-radius:50%!important;z-index:2!important}
+.gate-guild-btn>img[hidden],.gate-guild-btn.cmd-dayz-logo-unavailable>img{display:none!important}
+.gate-guild-btn>.cmd-dayz-guild-fallback{display:grid!important;place-items:center!important;position:absolute!important;inset:0!important;width:100%!important;height:100%!important;border-radius:50%!important;background:#29242e!important;color:white!important;font-size:13px!important;font-weight:800!important;z-index:1!important}
+.gate-draft-header>img{border-radius:50%!important;clip-path:circle(50% at 50%)!important;object-fit:cover!important}
+`;document.head.appendChild(el)})();
