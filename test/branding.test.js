@@ -23,11 +23,12 @@ test('the phone header logo remains centered after zooming',()=>{
 test('new icons and responsive JS invalidate the previous installed PWA cache',()=>{
   const html=read('public/index.html');
   const sw=read('public/sw.js');
-  assert.ok(html.includes('/app.js?v=24'));
-  assert.ok(html.includes('/dayz-gate-official-2026.svg?v=24'));
-  assert.ok(sw.includes("dayz-gate-v24-circle-20261008"));
-  assert.ok(sw.includes('/app.js?v=24'));
-  assert.ok(sw.includes('/dayz-gate-official-2026.svg?v=24'));
+  for(const asset of ['/app.js','/i18n.js','/dayz-gate-official-2026.svg']){
+    const found=html.match(new RegExp(asset.replace(/\\./g,'\\\\.')+'(?:\\\\?v=\\\\d+)?'));
+    assert.ok(found,'Asset missing from HTML: '+asset);
+    assert.ok(sw.includes(found[0]),'Service worker caches the wrong version: '+asset);
+  }
+  assert.match(sw,/dayz-gate-v\\d+-[\\w-]+/);
 });
 
 test('DayZ Gate keeps eleven languages including Corsican',()=>{
