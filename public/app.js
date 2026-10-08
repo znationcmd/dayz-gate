@@ -357,7 +357,7 @@ function renderWelcomeDashboard(){
  `;document.head.appendChild(style);
 }
 
-const languageScript=document.createElement("script");languageScript.src="/i18n.js?v=23";document.head.appendChild(languageScript);
+// The i18n bundle is already loaded once by public/index.html. Avoid duplicate observers and language resets.
 
 const gatePolish=document.createElement('style');gatePolish.textContent=`
 @keyframes dayzBackgroundDrift{0%{background-position:center center}50%{background-position:53% 46%}100%{background-position:center center}}
