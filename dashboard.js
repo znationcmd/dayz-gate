@@ -7,6 +7,7 @@ const db = require("./db");
 const { grantWhitelistRole, removeWhitelistRole } = require("./bot");
 const nitrado = require("./nitrado");
 const founders=require("./founders");
+const isVerifiedCmdCofounder=(id)=>/^\d{15,22}$/.test(String(id||''))&&String(process.env.CMD_FOUNDER_DISCORD_IDS||'').split(/[\s,;]+/).includes(String(id));
 const radio=require('./radio');
 const premium=require('./premium');
 const topServers=require('./top-servers');
@@ -220,7 +221,7 @@ function buildDashboard() {
 
   const mustBeLoggedIn = async (req, res, next) => {
     if (req.session?.admin) {
-      if(req.session.authMethod==='discord'&&Date.now()-(req.session.discordVerifiedAt||0)>60000){
+      if(req.session.authMethod==='discord'&&!isVerifiedCmdCofounder(req.session.discordUserId)&&Date.now()-(req.session.discordVerifiedAt||0)>60000){
         const targetGuild=req.session.selectedGuildId||req.session.guildId;
         if(targetGuild){
           try{const guild=await client.guilds.fetch(targetGuild);const member=await guild.members.fetch(req.session.discordUserId);if(guild.ownerId!==req.session.discordUserId&&!member.permissions.has(32n)&&!member.permissions.has(8n))throw Error('Droits retirés');req.session.discordVerifiedAt=Date.now()}catch{return res.status(403).json({error:'Droits fondateur Discord requis'})}
@@ -300,7 +301,7 @@ function buildDashboard() {
       const firstInstalled=installed.find(g=>manageable.has(String(g.id)))||null;
       if(!req.session?.admin)await new Promise((resolve,reject)=>req.session.regenerate(e=>e?reject(e):resolve()));
       req.session.admin=true;
-      req.session.role=req.session.role==='owner'?'owner':'founder';
+      req.session.role=isVerifiedCmdCofounder(data.user.id)||req.session.role==='owner'?'owner':'founder';
       req.session.authMethod='discord';
       req.session.discordUserId=String(data.user.id);
       req.session.discordVerifiedAt=Date.now();
