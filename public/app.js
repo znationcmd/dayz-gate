@@ -357,7 +357,7 @@ function renderWelcomeDashboard(){
  `;document.head.appendChild(style);
 }
 
-const languageScript=document.createElement("script");languageScript.src="/i18n.js?v=22";document.head.appendChild(languageScript);
+const languageScript=document.createElement("script");languageScript.src="/i18n.js?v=23";document.head.appendChild(languageScript);
 
 const gatePolish=document.createElement('style');gatePolish.textContent=`
 @keyframes dayzBackgroundDrift{0%{background-position:center center}50%{background-position:53% 46%}100%{background-position:center center}}
@@ -382,7 +382,7 @@ body{animation:dayzBackgroundDrift 34s ease-in-out infinite;background-size:auto
 `;document.head.appendChild(gatePolish);
 
 let dayzGateSw=null;
-const DAYZ_PWA_VERSION='22';
+const DAYZ_PWA_VERSION='23';
 const DAYZ_RELOAD_KEY='dayz-pwa-reloaded-'+DAYZ_PWA_VERSION;
 async function forceDayzGateRefresh(){
  const btn=document.getElementById('dayz-force-refresh');if(btn){btn.disabled=true;btn.dataset.oldText=btn.textContent;btn.textContent='…'}
