@@ -37,3 +37,9 @@ test('DayZ Gate keeps eleven languages including Corsican',()=>{
   }
   assert.match(source,/\bCorsu\b/);
 });
+
+test('installation worker does not delete unrelated dashboard PWA caches',()=>{
+  const installer=read('public/sw-install.js');
+  assert.ok(installer.includes("x.startsWith('dayz-gate-install-')&&x!==CACHE"));
+  assert.doesNotMatch(installer,/\.filter\(x=>x!==CACHE\)/);
+});
