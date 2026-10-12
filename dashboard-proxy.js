@@ -34,6 +34,8 @@ function proxy(req,res){
 }
 
 app.get('/api/pwa/version',(req,res)=>{res.set('Cache-Control','no-store, max-age=0');res.json({version:process.env.RAILWAY_DEPLOYMENT_ID||process.env.RAILWAY_GIT_COMMIT_SHA||'20261012-pwa-auto-1'})});
+const CMD_DAYZ_PWA_VERSION=String(process.env.RAILWAY_DEPLOYMENT_ID||process.env.RAILWAY_GIT_COMMIT_SHA||"dayz-boot-"+Date.now());
+app.get('/pwa-version.json',(req,res)=>res.set('Cache-Control','no-store').json({version:CMD_DAYZ_PWA_VERSION}));
 app.get('/health',(req,res)=>res.json({ok:true,service:'dayz-gate-dashboard'}));
 app.use(['/api','/auth','/oauth','/callback','/dayz-gate-apple-180.jpg'],proxy);
 app.use(express.static(path.join(__dirname,'public'),{etag:true,maxAge:'5m'}));
