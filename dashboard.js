@@ -517,6 +517,16 @@ function buildDashboard() {
     res.json({ ok: true });
   });
 
+  app.post("/api/neuria/chat", express.json({limit:"12kb"}), async (req,res)=>{
+    const message=typeof req.body?.message==="string"?req.body.message.trim():"";
+    if(!message||message.length>1000)return res.status(400).json({error:"Question invalide (1000 caractères maximum)."});
+    try{
+      const upstream=await fetch("https://cmd-ai-cpu-web-production.up.railway.app/api/chat",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({message}),signal:AbortSignal.timeout(50000)});
+      const data=await upstream.json().catch(()=>({error:"Réponse CMD NEURIA invalide."}));
+      return res.status(upstream.status).json(upstream.ok?{reply:String(data.reply||"")}:{error:String(data.error||"CMD NEURIA indisponible.")});
+    }catch{return res.status(503).json({error:"CMD NEURIA momentanément indisponible."});}
+  });
+
   app.use((err, req, res, next) => {
     console.error('Erreur Dashboard :', err.code || err.name);
     if (res.headersSent) return next(err);
