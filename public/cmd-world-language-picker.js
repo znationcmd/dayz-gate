@@ -92,7 +92,7 @@ input{min-height:42px;border:1px solid #604984;border-radius:10px;background:#20
   alphabet.replaceChildren();
   for(const key of letters){
    const items=countries.filter(([code,name])=>{
-    const first=normalized(name).charAt(0).toUpperCase();
+    const first=normalized(name).replace(/^[^a-z0-9]+/i,"").charAt(0).toUpperCase();
     return key==="#"?!/^[A-Z]$/.test(first):first===key;
    });
    if(!items.length)continue;
