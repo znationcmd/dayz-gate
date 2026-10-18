@@ -8,6 +8,11 @@
   const add=()=>{if(document.body&&!overlay.isConnected)document.body.prepend(overlay)};
   if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",add,{once:true});
   else add();
+  // Admin login rebuilds document.body.innerHTML; restore only this decorative layer.
+  const observer=new MutationObserver(()=>{if(!overlay.isConnected)add()});
+  const watch=()=>{if(document.body)observer.observe(document.body,{childList:true})};
+  if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",watch,{once:true});
+  else watch();
   const motion=window.matchMedia("(prefers-reduced-motion: reduce)");
   const wide=window.matchMedia("(min-width: 900px) and (pointer: fine)");
   let queued=false,x=0,y=0;
