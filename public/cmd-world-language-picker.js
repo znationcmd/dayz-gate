@@ -332,5 +332,68 @@ input{min-height:42px;border:1px solid #604984;border-radius:10px;background:#20
  if(checkbox.checked)window.addEventListener("DOMContentLoaded",()=>window.dispatchEvent(
   new CustomEvent("cmd-world-language-change",{detail:{language:saved,fallback:fallback(saved),mode:"auto"}})
  ),{once:true});
+
+ // Shared interface glossary: translate real navigation controls, not user content.
+ // Unknown languages keep their selected BCP-47 code and use the nearest available UI fallback.
+ const uiKeys=["Accueil","Messages","Serveurs","Profil","Paramètres","Langue","Boutique","Rechercher","Enregistrer","Annuler","Fermer","Créer","Modifier","Supprimer","Retour","Aide","Notifications","Amis","Appels","Déconnexion","Se connecter","Inviter","Tableau de bord","Mes serveurs","Fichiers","Sauvegardes","Console","Joueurs","Assistance","Facturation","Portefeuille","Membres","Rôles","Confidentialité","Sécurité","Apparence","Applications","Télécharger","Partager","Traduire"];
+ const uiValues={
+  en:["Home","Messages","Servers","Profile","Settings","Language","Shop","Search","Save","Cancel","Close","Create","Edit","Delete","Back","Help","Notifications","Friends","Calls","Log out","Log in","Invite","Dashboard","My servers","Files","Backups","Console","Players","Support","Billing","Wallet","Members","Roles","Privacy","Security","Appearance","Apps","Download","Share","Translate"],
+  de:["Startseite","Nachrichten","Server","Profil","Einstellungen","Sprache","Shop","Suchen","Speichern","Abbrechen","Schließen","Erstellen","Bearbeiten","Löschen","Zurück","Hilfe","Benachrichtigungen","Freunde","Anrufe","Abmelden","Anmelden","Einladen","Dashboard","Meine Server","Dateien","Backups","Konsole","Spieler","Support","Abrechnung","Guthaben","Mitglieder","Rollen","Datenschutz","Sicherheit","Darstellung","Apps","Herunterladen","Teilen","Übersetzen"],
+  es:["Inicio","Mensajes","Servidores","Perfil","Ajustes","Idioma","Tienda","Buscar","Guardar","Cancelar","Cerrar","Crear","Editar","Eliminar","Volver","Ayuda","Notificaciones","Amigos","Llamadas","Cerrar sesión","Iniciar sesión","Invitar","Panel de control","Mis servidores","Archivos","Copias de seguridad","Consola","Jugadores","Ayuda","Facturación","Monedero","Miembros","Roles","Privacidad","Seguridad","Apariencia","Aplicaciones","Descargar","Compartir","Traducir"],
+  it:["Home","Messaggi","Server","Profilo","Impostazioni","Lingua","Negozio","Cerca","Salva","Annulla","Chiudi","Crea","Modifica","Elimina","Indietro","Aiuto","Notifiche","Amici","Chiamate","Esci","Accedi","Invita","Pannello di controllo","I miei server","File","Backup","Console","Giocatori","Assistenza","Fatturazione","Portafoglio","Membri","Ruoli","Privacy","Sicurezza","Aspetto","App","Scarica","Condividi","Traduci"],
+  pt:["Início","Mensagens","Servidores","Perfil","Definições","Idioma","Loja","Pesquisar","Guardar","Cancelar","Fechar","Criar","Editar","Eliminar","Voltar","Ajuda","Notificações","Amigos","Chamadas","Terminar sessão","Iniciar sessão","Convidar","Painel","Meus servidores","Ficheiros","Cópias de segurança","Consola","Jogadores","Suporte","Faturação","Carteira","Membros","Funções","Privacidade","Segurança","Aparência","Aplicações","Transferir","Partilhar","Traduzir"],
+  ru:["Главная","Сообщения","Серверы","Профиль","Настройки","Язык","Магазин","Поиск","Сохранить","Отмена","Закрыть","Создать","Изменить","Удалить","Назад","Помощь","Уведомления","Друзья","Звонки","Выйти","Войти","Пригласить","Панель управления","Мои серверы","Файлы","Копии","Консоль","Игроки","Поддержка","Оплата","Кошелёк","Участники","Роли","Конфиденциальность","Безопасность","Внешний вид","Приложения","Скачать","Поделиться","Перевести"],
+  ko:["홈","메시지","서버","프로필","설정","언어","상점","검색","저장","취소","닫기","만들기","수정","삭제","뒤로","도움말","알림","친구","통화","로그아웃","로그인","초대","대시보드","내 서버","파일","백업","콘솔","플레이어","지원","결제","지갑","멤버","역할","개인정보","보안","화면","앱","다운로드","공유","번역"],
+  ja:["ホーム","メッセージ","サーバー","プロフィール","設定","言語","ショップ","検索","保存","キャンセル","閉じる","作成","編集","削除","戻る","ヘルプ","通知","友達","通話","ログアウト","ログイン","招待","ダッシュボード","マイサーバー","ファイル","バックアップ","コンソール","プレイヤー","サポート","請求","ウォレット","メンバー","ロール","プライバシー","セキュリティ","外観","アプリ","ダウンロード","共有","翻訳"],
+  zh:["首页","消息","服务器","个人资料","设置","语言","商店","搜索","保存","取消","关闭","创建","编辑","删除","返回","帮助","通知","好友","通话","退出登录","登录","邀请","控制面板","我的服务器","文件","备份","控制台","玩家","支持","账单","钱包","成员","角色","隐私","安全","外观","应用","下载","分享","翻译"]
+ };
+ const labelOriginal=new WeakMap(),attrOriginal=new WeakMap();
+ const aliases={gsw:"de",bar:"de",deu:"de",ger:"de",fra:"fr",eng:"en",spa:"es",ita:"it",por:"pt",rus:"ru",jpn:"ja",kor:"ko",zho:"zh",cmn:"zh"};
+ const availableUI=code=>{
+  const base=String(code||"fr").split("-")[0].toLowerCase();
+  return aliases[base]||(uiValues[base]?base:"fr");
+ };
+ const uiSelectors='nav a,nav button,nav span,header a,header button,header span,aside a,aside button,aside span,[role="navigation"] a,[role="navigation"] button,[class*="sidebar"] a,[class*="sidebar"] button,[class*="topbar"] button,[class*="menu"] a,[class*="menu"] button,[class*="dock"] button';
+ function translateMenus(code){
+  const lang=availableUI(code),values=uiValues[lang],dict=new Map();
+  if(values)uiKeys.forEach((key,i)=>dict.set(key,values[i]||key));
+  const elements=document.querySelectorAll(uiSelectors);
+  for(const el of elements){
+   if(el.closest('[contenteditable="true"],[data-message-id],.chat-messages,#chatMessages'))continue;
+   for(const node of el.childNodes){
+    if(node.nodeType!==Node.TEXT_NODE)continue;
+    if(!labelOriginal.has(node))labelOriginal.set(node,node.textContent);
+    const source=labelOriginal.get(node),m=/^(\s*)(.*?)(\s*)$/s.exec(source);
+    if(m&&uiKeys.includes(m[2])){
+     const next=m[1]+(dict.get(m[2])||m[2])+m[3];
+     if(node.textContent!==next)node.textContent=next;
+    }
+   }
+   let originals=attrOriginal.get(el);
+   if(!originals){originals={};for(const attribute of ["title","aria-label"]){if(el.hasAttribute(attribute))originals[attribute]=el.getAttribute(attribute)}attrOriginal.set(el,originals)}
+   for(const [attribute,source] of Object.entries(originals)){
+    if(uiKeys.includes(source)){
+     const next=dict.get(source)||source;
+     if(el.getAttribute(attribute)!==next)el.setAttribute(attribute,next);
+    }
+   }
+  }
+ }
+ let menuLanguage=existing(),menuScheduled=false;
+ function menuRefresh(){
+  if(menuScheduled)return;menuScheduled=true;
+  requestAnimationFrame(()=>{menuScheduled=false;translateMenus(menuLanguage)});
+ }
+ window.addEventListener("cmd-world-language-change",event=>{menuLanguage=event.detail?.language||existing();menuRefresh()});
+ window.addEventListener("cmd-language-change",event=>{menuLanguage=event.detail?.language||existing();menuRefresh()});
+ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",menuRefresh,{once:true});else menuRefresh();
+ const watchMenus=new MutationObserver(records=>{
+  if(records.some(record=>{
+   const el=record.target.nodeType===1?record.target:record.target.parentElement;
+   return el?.closest?.('nav,header,aside,[role="navigation"],[class*="sidebar"],[class*="menu"],[class*="dock"],[class*="topbar"]');
+  }))menuRefresh();
+ });
+ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>watchMenus.observe(document.body,{childList:true,subtree:true}),{once:true});
+ else watchMenus.observe(document.body,{childList:true,subtree:true});
  window.CMDWorldLanguagePicker={get language(){return existing()},open:()=>{if(panel.hidden)void toggle()},set:(code)=>save(code,code)};
 })();
