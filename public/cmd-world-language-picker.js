@@ -58,10 +58,15 @@ input{min-height:42px;border:1px solid #604984;border-radius:10px;background:#20
 .auto input{width:20px;height:20px;min-height:20px}
 .more{width:100%;min-height:44px;border:1px solid #775ea1;border-radius:10px;background:#23233d;color:#fff;padding:11px}
 .counter{font-size:12px;color:#d5cbe7;margin:0}
-.alphabet{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;flex:none}
-.letter{background:#231935;color:#ece3ff;border:1px solid #735c9b;border-radius:8px;min-width:0;min-height:39px;font-weight:750;padding:3px}
-.letter[aria-pressed="true"]{border-color:#70dafa;background:#403064;box-shadow:0 0 0 1px #70dafa55}
-.letter:focus-visible{outline:2px solid #fff;outline-offset:1px}
+.alphabet{display:grid;grid-template-columns:minmax(0,1fr);gap:7px;flex:none;max-height:47dvh;overflow-y:auto;overscroll-behavior:contain}
+.country-folder{border:1px solid #735c9b;border-radius:12px;background:#21172f;overflow:hidden}
+.country-folder summary{list-style:none;display:flex;justify-content:space-between;align-items:center;min-height:45px;padding:11px 13px;color:#eee5ff;font-size:16px;font-weight:800;cursor:pointer}
+.country-folder summary::-webkit-details-marker{display:none}
+.country-folder summary:focus-visible{outline:2px solid #fff;outline-offset:-3px}
+.country-folder[open] summary{background:#403064;border-bottom:1px solid #735c9b}
+.country-folder-content{max-height:45dvh;overflow-y:auto;overscroll-behavior:contain;padding:6px}
+.country-folder-content button{min-height:44px;border-radius:8px}
+.results.country-index-actions{flex:none;min-height:0;border:0}
 
 `;
  const trigger=document.createElement("button");trigger.type="button";trigger.className="trigger";
@@ -82,15 +87,32 @@ input{min-height:42px;border:1px solid #604984;border-radius:10px;background:#20
  const counter=document.createElement("p");counter.className="counter";
  const alphabet=document.createElement("div");alphabet.className="alphabet";
  alphabet.setAttribute("role","group");alphabet.setAttribute("aria-label","Pays classés de A à Z");
- const letters=["Toutes",..."ABCDEFGHIJKLMNOPQRSTUVWXYZ","#"];let letter="A",selectedCountry=null,viewMode="countries";
- for(const key of letters){
-  const item=document.createElement("button");item.type="button";item.className="letter";item.dataset.letter=key;
-  item.textContent=key==="Toutes"?"Tout":key==="#"?"Autres":key;
-  item.setAttribute("aria-label",key==="Toutes"?"Tous les pays":key==="#"?"Autres pays": "Pays commençant par "+key);
-  item.setAttribute("aria-pressed",String(key===letter));
-  alphabet.append(item);
+ const letters=[..."ABCDEFGHIJKLMNOPQRSTUVWXYZ","#"];let letter="A",selectedCountry=null,viewMode="countries";
+ function showLetters(){
+  alphabet.replaceChildren();
+  for(const key of letters){
+   const items=countries.filter(([code,name])=>{
+    const first=normalized(name).charAt(0).toUpperCase();
+    return key==="#"?!/^[A-Z]$/.test(first):first===key;
+   });
+   if(!items.length)continue;
+   const folder=document.createElement("details");folder.className="country-folder";
+   folder.dataset.cmdLetter=key;
+   const head=document.createElement("summary");head.textContent=key+" · "+items.length+" pays";
+   head.setAttribute("aria-label","Ouvrir les pays qui commencent par "+key);
+   folder.append(head);
+   const body=document.createElement("div");body.className="country-folder-content";
+   for(const [code,name] of items){
+    const button=document.createElement("button");button.type="button";button.className="choice";
+    button.dataset.cmdCountry=code;button.textContent=name+" ›";
+    button.addEventListener("click",()=>{
+     selectedCountry=code;viewMode="country-languages";query.value="";render();
+    });
+    body.append(button);
+   }
+   folder.append(body);alphabet.append(folder);
+  }
  }
- function showLetters(){alphabet.querySelectorAll("[data-letter]").forEach(el=>el.setAttribute("aria-pressed",String((el.dataset.letter==="Toutes"?"":el.dataset.letter)===letter)))}
  const results=document.createElement("div");results.className="results";results.setAttribute("role","group");
  const custom=document.createElement("input");custom.type="text";custom.maxLength=64;
  custom.placeholder="Code régional personnel : gsw-CH-x-bern";
@@ -160,6 +182,7 @@ input{min-height:42px;border:1px solid #604984;border-radius:10px;background:#20
   }
  }
  function renderWorld(){
+  alphabet.hidden=true;results.classList.remove("country-index-actions");
   results.replaceChildren();shown=0;matched=[];
   if(!status.languages){results.textContent="Chargement du catalogue…";return}
   const queryText=query.value.trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
@@ -194,6 +217,14 @@ input{min-height:42px;border:1px solid #604984;border-radius:10px;background:#20
  function renderCountries(){
   results.replaceChildren();
   const search=normalized(query.value.trim());
+  if(!search){
+   alphabet.hidden=false;showLetters();
+   results.classList.add("country-index-actions");
+   counter.textContent=countries.length+" pays et territoires · ouvre un dossier A, B, C…";
+   worldButton();
+   return;
+  }
+  alphabet.hidden=true;results.classList.remove("country-index-actions");
   const found=countries.filter(([code,name])=>{
     if(search)return normalized(name+" "+code).includes(search);
     const first=normalized(name).charAt(0).toUpperCase();
@@ -211,6 +242,7 @@ input{min-height:42px;border:1px solid #604984;border-radius:10px;background:#20
   worldButton();
  }
  function renderCountryLanguages(){
+  alphabet.hidden=true;results.classList.remove("country-index-actions");
   results.replaceChildren();
   const item=countries.find(c=>c[0]===selectedCountry);
   if(!item){viewMode="countries";return renderCountries()}
@@ -260,12 +292,6 @@ input{min-height:42px;border:1px solid #604984;border-radius:10px;background:#20
   const term=normalized(query.value.trim());
   viewMode=term&&!countries.some(([code,name])=>normalized(code+" "+name).includes(term))?"world":"countries";
   render();
- });
- alphabet.addEventListener("click",event=>{
-  const button=event.target.closest("button[data-letter]");
-  if(!button||!alphabet.contains(button))return;
-  letter=button.dataset.letter==="Toutes"?"":button.dataset.letter;
-  selectedCountry=null;viewMode="countries";query.value="";showLetters();render();
  });
  checkbox.addEventListener("change",()=>{if(checkbox.checked)save(detect(),"Langue de l'appareil","auto");else save(existing(),"Langue actuelle","manual")});
  applyCustom.addEventListener("click",()=>save(custom.value,custom.value));
