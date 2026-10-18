@@ -1,0 +1,228 @@
+/* CMD DAYZ GATE — premium dimensional UI, 2026-10-18.
+   Preserve the original DayZ red, warm red, gold and charcoal palette.
+   Vector, CSS-gradient and resolution-independent details scale to 16K. */
+:root{
+  --dg-crimson:#e11b2b;
+  --dg-scarlet:#e36754;
+  --dg-gold:#c89b45;
+  --dg-ink:#080b0c;
+  --dg-graphite:#202428;
+  --dg-line:rgba(227,103,84,.32);
+  --dg-bevel:inset 0 1px 0 rgba(255,255,255,.19),inset 0 -3px 6px rgba(0,0,0,.38);
+  --dg-depth:0 12px 28px rgba(0,0,0,.5),0 2px 1px rgba(0,0,0,.4);
+  --dg-glow:0 0 0 1px rgba(227,103,84,.6),0 0 19px rgba(225,27,43,.44),0 0 36px rgba(225,27,43,.16);
+  --dg-round:clamp(12px,1.1vw,19px);
+}
+html{scroll-behavior:smooth}
+body{color-scheme:dark;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+body::after{
+  content:"";pointer-events:none;position:fixed;inset:0;z-index:-1;
+  background:radial-gradient(ellipse at 88% 12%,rgba(225,27,43,.11),transparent 42%),radial-gradient(ellipse at 5% 95%,rgba(200,155,69,.07),transparent 49%);
+}
+:is(.shell,.main,.admin){position:relative}
+:is(.reference-top,.reference-flow,.reference-panels,.reference-bottom,.gate-side,.gate-guild-rail,.gate-draft-header){min-width:0}
+:is(.panel,.card,.reference-box,.gate-menu-notice,.gate-side-top,.reference-empty){
+  border-radius:var(--dg-round);
+  box-shadow:var(--dg-depth),inset 0 1px 0 rgba(255,255,255,.09),inset 0 -1px 0 rgba(0,0,0,.55);
+}
+.panel,.card{border-color:rgba(227,103,84,.26);backdrop-filter:blur(14px)}
+.card{
+  background:linear-gradient(145deg,rgba(43,48,45,.94),rgba(12,17,16,.94));
+  transition:box-shadow .22s ease,border-color .22s ease,transform .22s ease;
+}
+.card:hover{border-color:rgba(227,103,84,.6);transform:translateY(-2px);box-shadow:var(--dg-depth),0 0 22px rgba(225,27,43,.17)}
+.panel{background:linear-gradient(156deg,rgba(32,36,40,.95),rgba(8,11,12,.94))}
+.reference-box{
+  position:relative;
+  background:linear-gradient(149deg,rgba(33,37,41,.97),rgba(11,14,17,.98) 62%,rgba(35,10,14,.97))!important;
+  border:1px solid rgba(190,42,56,.72)!important;
+  border-radius:var(--dg-round)!important;
+  box-shadow:0 16px 32px rgba(0,0,0,.45),0 0 16px rgba(225,27,43,.13),inset 0 1px 0 rgba(255,255,255,.1)!important;
+  overflow:hidden;
+}
+.reference-box::before,.panel::before{
+  content:"";pointer-events:none;position:absolute;inset:0 0 auto;height:34%;
+  background:linear-gradient(180deg,rgba(255,255,255,.058),transparent);
+  border-radius:inherit;
+}
+.reference-box header{position:relative;z-index:1}
+.reference-box h2,.panel h2{letter-spacing:.01em}
+.reference-stats>div,.reference-empty,.reference-chart-empty{
+  background:linear-gradient(150deg,rgba(38,42,45,.85),rgba(8,12,15,.88))!important;
+  border:1px solid rgba(130,76,78,.4)!important;
+  border-radius:11px!important;
+  box-shadow:var(--dg-bevel);
+}
+.reference-stats>div{
+  transition:border-color .2s ease,box-shadow .2s ease,transform .2s ease;
+}
+.reference-stats>div:hover{transform:translateY(-2px);border-color:var(--dg-scarlet)!important;box-shadow:var(--dg-bevel),0 0 17px rgba(225,27,43,.22)}
+.reference-step{
+  isolation:isolate;position:relative;
+  background:linear-gradient(143deg,rgba(82,19,26,.96),rgba(18,22,26,.97) 51%,rgba(7,10,12,.98))!important;
+  border:1px solid rgba(225,43,59,.85)!important;
+  border-radius:var(--dg-round)!important;
+  box-shadow:var(--dg-bevel),0 10px 22px rgba(0,0,0,.5),0 0 17px rgba(225,27,43,.22)!important;
+  transition:transform .2s ease,box-shadow .22s ease,border-color .22s ease,filter .22s ease;
+}
+.reference-step::before{
+  content:"";position:absolute;pointer-events:none;inset:0 0 auto;height:45%;border-radius:inherit;
+  background:linear-gradient(165deg,rgba(255,255,255,.18),rgba(255,255,255,.045) 25%,transparent 80%);
+}
+.reference-step>svg{filter:drop-shadow(0 0 8px rgba(227,103,84,.34))}
+.reference-step:where(:hover,:focus-visible,.cmd-gate-click-lit){transform:translateY(-3px)!important;box-shadow:var(--dg-bevel),0 15px 26px rgba(0,0,0,.55),var(--dg-glow)!important;border-color:var(--dg-scarlet)!important}
+.reference-hero{filter:drop-shadow(0 14px 35px rgba(0,0,0,.22))}
+.reference-top{position:relative;z-index:2}
+.reference-top input,.reference-search,input,select,textarea,.gate-search-wrap{
+  box-shadow:inset 0 3px 8px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.055);
+}
+:is(input,textarea,select):focus-visible,.gate-search-wrap:focus-within{
+  outline:2px solid var(--dg-scarlet);outline-offset:2px;
+  border-color:var(--dg-scarlet)!important;box-shadow:inset 0 2px 6px rgba(0,0,0,.35),0 0 0 3px rgba(225,27,43,.16),0 0 22px rgba(225,27,43,.18);
+}
+:is(button,.btn,a.smallbtn,.gate-discord,.reference-account,.reference-red){
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+:is(button,.btn,a.smallbtn,.gate-discord,.reference-account):not(:disabled){
+  transition:color .2s ease,border-color .2s ease,box-shadow .22s ease,background .22s ease,filter .2s ease,transform .18s ease;
+}
+/* Glossy, physically raised controls; existing brand colors remain authoritative. */
+:is(.primary,.secondary,.btn,.reference-red,.reference-account,.smallbtn,.reference-box header button,.gate-discord){
+  position:relative;border-radius:11px!important;
+  box-shadow:var(--dg-bevel),0 7px 14px rgba(0,0,0,.43),0 2px 0 rgba(0,0,0,.4)!important;
+  text-shadow:0 1px 1px rgba(0,0,0,.35);
+}
+:is(.primary,.reference-red,.smallbtn.red){
+  background:linear-gradient(168deg,#f04751 0%,var(--dg-crimson) 22%,#aa1524 63%,#730c19 100%)!important;
+  border:1px solid rgba(255,121,112,.7)!important;
+  color:#fff!important;
+}
+:is(.secondary,.reference-account,.smallbtn:not(.red),.reference-box header button,.gate-discord){
+  background:linear-gradient(168deg,rgba(79,84,86,.98),rgba(31,36,39,.98) 36%,rgba(13,17,19,.99))!important;
+  border:1px solid rgba(128,140,139,.38)!important;
+  color:#f5f5f2;
+}
+:is(.primary,.secondary,.btn,.reference-red,.reference-account,.smallbtn,.reference-box header button,.gate-discord)::before{
+  content:"";position:absolute;pointer-events:none;inset:1px 1px auto;height:48%;border-radius:inherit;
+  background:linear-gradient(160deg,rgba(255,255,255,.22),rgba(255,255,255,.035) 65%,transparent);
+}
+:is(.primary,.secondary,.btn,.reference-red,.reference-account,.smallbtn,.reference-box header button,.gate-discord):where(:hover,:focus-visible,.cmd-gate-click-lit){
+  outline:none!important;border-color:var(--dg-scarlet)!important;
+  box-shadow:var(--dg-bevel),0 8px 17px rgba(0,0,0,.54),var(--dg-glow)!important;
+  filter:brightness(1.11);
+}
+:is(.primary,.secondary,.btn,.reference-red,.reference-account,.smallbtn,.reference-box header button):active{
+  transform:translateY(2px) scale(.992);
+  box-shadow:inset 0 3px 9px rgba(0,0,0,.5),0 0 14px rgba(225,27,43,.35)!important;
+}
+button:disabled{cursor:not-allowed;opacity:.55;filter:grayscale(.3)}
+/* Live sidebar and navigation: graphite preserved, crimson outlines on selection. */
+.gate-side{
+  background:linear-gradient(156deg,#373d40,#282e31 54%,#202428)!important;
+  border-right:1px solid rgba(227,103,84,.35)!important;
+  box-shadow:10px 0 35px rgba(0,0,0,.56),inset 1px 0 0 rgba(255,255,255,.07)!important;
+  backdrop-filter:blur(18px);
+}
+.gate-side-top{
+  background:linear-gradient(160deg,rgba(255,255,255,.06),transparent 80%);
+  border-bottom:1px solid rgba(227,103,84,.22)!important;
+}
+.gate-draft-header,.gate-guild-rail{
+  background:linear-gradient(155deg,#33393c,#1d2226 70%,#181c1e)!important;
+  box-shadow:0 10px 24px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.10)!important;
+}
+.gate-draft-header{border-bottom:1px solid rgba(227,103,84,.37)!important}
+.gate-guild-rail{border-right:1px solid rgba(227,103,84,.23)!important}
+.gate-links button{
+  isolation:isolate;position:relative;
+  border:1px solid transparent!important;
+  border-radius:11px!important;
+  background:linear-gradient(165deg,rgba(255,255,255,.06),rgba(0,0,0,.07))!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 2px 5px rgba(0,0,0,.16)!important;
+  margin-bottom:5px;
+}
+.gate-links button::before{
+  content:"";pointer-events:none;position:absolute;inset:0 0 auto;height:45%;border-radius:inherit;
+  background:linear-gradient(170deg,rgba(255,255,255,.1),transparent);
+}
+.gate-links button:hover{background:linear-gradient(145deg,#51565a,#343a3e)!important;border-color:rgba(227,103,84,.55)!important;box-shadow:var(--dg-bevel),0 0 18px rgba(225,27,43,.21)!important}
+.gate-links button:where(.selected,[aria-current="page"],.cmd-gate-click-lit,:focus-visible){
+  color:#fff!important;
+  background:linear-gradient(145deg,#743039,#3d2a2e 53%,#24272b)!important;
+  border-color:var(--dg-scarlet)!important;
+  box-shadow:var(--dg-bevel),0 0 0 1px rgba(227,103,84,.47),0 0 17px rgba(225,27,43,.49),inset 4px 0 0 var(--dg-crimson)!important;
+}
+.gate-links button:where(.selected,[aria-current="page"],.cmd-gate-click-lit,:focus-visible) svg{
+  color:#fff!important;filter:drop-shadow(0 0 5px var(--dg-scarlet));
+}
+.gate-links :is(svg,path){max-width:none}
+.gate-guild-btn{
+  box-shadow:inset 0 2px 7px rgba(0,0,0,.53),0 5px 12px rgba(0,0,0,.4)!important;
+  transition:border-color .19s ease,box-shadow .19s ease,filter .19s ease,transform .19s ease;
+}
+.gate-guild-btn:where(.active,:hover,:focus-visible,.cmd-gate-click-lit){
+  border-color:var(--dg-scarlet)!important;
+  box-shadow:0 0 0 2px rgba(227,103,84,.5),0 0 17px rgba(225,27,43,.46),0 5px 13px rgba(0,0,0,.5)!important;
+}
+.gate-draft-actions button,.gate-draft-menu{
+  border:1px solid rgba(227,103,84,.16)!important;
+  border-radius:12px!important;
+  background:linear-gradient(160deg,rgba(255,255,255,.12),rgba(0,0,0,.12))!important;
+  box-shadow:var(--dg-bevel),0 4px 9px rgba(0,0,0,.34)!important;
+}
+.gate-draft-actions button:where(:hover,:focus-visible,.cmd-gate-click-lit),.gate-draft-menu:where(:hover,:focus-visible,.cmd-gate-click-lit){
+  border-color:var(--dg-scarlet)!important;box-shadow:var(--dg-bevel),var(--dg-glow)!important;
+}
+.gate-draft-grid i{box-shadow:0 0 9px rgba(227,103,84,.38)}
+.gate-server-context img,.gate-server-context .fallback{box-shadow:0 0 0 2px rgba(227,103,84,.28),0 5px 15px rgba(0,0,0,.45)}
+.gate-search-wrap:focus-within{border-color:var(--dg-scarlet)!important}
+.gate-group h3{color:#c9cbd0!important;letter-spacing:.115em}
+.gate-group h3::after{color:var(--dg-scarlet)!important}
+.gate-discord{display:block}
+.gate-menu-notice{background:linear-gradient(150deg,#281014,#101316)!important;border:1px solid rgba(227,103,84,.57)!important}
+/* Regular dashboard content, tables, menus and dialogs */
+.reference-table,.table{font-variant-numeric:tabular-nums}
+.reference-table thead,.table thead{background:rgba(11,15,18,.92)}
+.reference-table :is(td,th),.table :is(td,th){border-bottom:1px solid rgba(128,91,91,.17)}
+.reference-table tbody tr:hover,.table tbody tr:hover{background:rgba(225,27,43,.11)}
+.pill{border:1px solid rgba(227,103,84,.4);box-shadow:inset 0 1px 0 rgba(255,255,255,.14)}
+dialog,#gate-login,.modal,[role="dialog"]{
+  border:1px solid rgba(227,103,84,.6);
+  border-radius:var(--dg-round);
+  box-shadow:0 32px 90px rgba(0,0,0,.7),0 0 28px rgba(225,27,43,.18),inset 0 1px 0 rgba(255,255,255,.13);
+}
+dialog::backdrop{background:rgba(0,0,0,.72);backdrop-filter:blur(7px)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--dg-gold);outline-offset:2px}
+button:where(.cmd-gate-click-lit){animation:dg-glow-pulse .64s ease-out}
+@keyframes dg-glow-pulse{
+  0%{filter:brightness(1.24)}
+  45%{filter:brightness(1.15)}
+  100%{filter:brightness(1)}
+}
+@media(min-width:2000px){
+  .shell{padding-inline:clamp(26px,2vw,100px)}
+  .reference-box{padding:clamp(18px,1vw,34px)!important}
+  .reference-step strong{font-size:clamp(17px,1vw,25px)}
+  .gate-side{font-size:clamp(14px,.9vw,19px)}
+}
+@media(max-width:800px){
+  .gate-draft-actions button,.gate-draft-menu{min-height:44px;min-width:44px}
+  .shell,.main,.admin{max-width:100%;min-width:0}
+  .reference-panels,.reference-flow,.reference-bottom{min-width:0}
+  .reference-box{max-width:100%}
+  .gate-side,.gate-guild-rail{will-change:transform}
+}
+@media(max-width:540px){
+  .reference-box{border-radius:13px!important}
+  .reference-step{border-radius:12px!important}
+  .reference-step:where(:hover,:focus-visible,.cmd-gate-click-lit){transform:none!important}
+  :is(.gate-links button,.gate-draft-actions button,.gate-draft-menu){min-height:44px}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  :is(button,.btn,.reference-step,.gate-links button,.gate-guild-btn,.card){animation:none!important;transition:none!important}
+  .reference-step:where(:hover,:focus-visible,.cmd-gate-click-lit),.card:hover{transform:none!important}
+}
+/* No raster-upscaling: existing background images are left untouched;
+   icons, light/gloss, borders and text stay crisp at any screen resolution. */
