@@ -1,0 +1,126 @@
+/* CMD DAYZ GATE — B+C cinematic background motion.
+   Reuses the EXISTING inline WebP background via CSS inherit. No new image.
+   Original red/graphite/gold palette, menus, routes and user data untouched. */
+:root{
+  --dg-pointer-x:0px;
+  --dg-pointer-y:0px;
+}
+body{
+  /* The legacy animation modifies background-size on the whole document;
+     only the inherited image layer should move, not the interface. */
+  animation:none!important;
+  background-attachment:fixed;
+}
+body::before{
+  content:"";
+  position:fixed!important;
+  inset:-5% -5% -5% -5%!important;
+  z-index:-1!important;
+  pointer-events:none!important;
+  /* This inherits EXACTLY the original page background-image containing
+     its existing DayZ WebP. It does not substitute or fetch another image. */
+  background-image:inherit!important;
+  background-size:cover!important;
+  background-position:center top!important;
+  background-repeat:no-repeat!important;
+  background-attachment:scroll!important;
+  transform-origin:50% 45%;
+  animation:dg-cinematic-drift 34s cubic-bezier(.42,0,.58,1) infinite alternate!important;
+  will-change:transform;
+}
+@keyframes dg-cinematic-drift{
+  0%{transform:translate3d(calc(var(--dg-pointer-x) - 1.8%),calc(var(--dg-pointer-y) - 1.1%),0) scale(1.075)}
+  48%{transform:translate3d(calc(var(--dg-pointer-x) + 1.25%),calc(var(--dg-pointer-y) + .8%),0) scale(1.115)}
+  100%{transform:translate3d(calc(var(--dg-pointer-x) - .8%),calc(var(--dg-pointer-y) + 1.5%),0) scale(1.085)}
+}
+body::after{
+  content:"";
+  position:fixed!important;
+  inset:-12%!important;
+  pointer-events:none!important;
+  z-index:-1!important;
+  /* Warm red fog, tiny gold edge lighting and drifting atmospheric glow. */
+  background:
+    radial-gradient(ellipse at 16% 77%,rgba(166,13,29,.23),transparent 47%),
+    radial-gradient(ellipse at 79% 30%,rgba(225,27,43,.18),transparent 44%),
+    radial-gradient(ellipse at 78% 84%,rgba(200,155,69,.075),transparent 39%)!important;
+  background-repeat:no-repeat!important;
+  opacity:.84;
+  animation:dg-fog-glide 27s ease-in-out infinite alternate!important;
+  will-change:transform,opacity;
+}
+@keyframes dg-fog-glide{
+  0%{transform:translate3d(-2%,1%,0) scale(1);opacity:.60}
+  45%{transform:translate3d(2.3%,-1.5%,0) scale(1.045);opacity:.95}
+  100%{transform:translate3d(-1%,2.5%,0) scale(1.02);opacity:.69}
+}
+/* Ambient floaters are pure CSS gradients, not images/video or canvas. */
+#cmd-dayz-motion-particles{
+  pointer-events:none!important;
+  position:fixed;
+  inset:0;
+  z-index:0;
+  overflow:hidden;
+  contain:paint;
+}
+#cmd-dayz-motion-particles::before,
+#cmd-dayz-motion-particles::after{
+  content:"";position:absolute;
+  inset:-15%;
+  pointer-events:none;
+  opacity:.55;
+}
+#cmd-dayz-motion-particles::before{
+  background-image:
+    radial-gradient(circle,rgba(255,139,110,.70) 0 1px,transparent 1.4px),
+    radial-gradient(circle,rgba(238,178,106,.53) 0 1.4px,transparent 1.9px),
+    radial-gradient(circle,rgba(225,27,43,.48) 0 1.2px,transparent 1.6px);
+  background-size:191px 217px,269px 241px,327px 293px;
+  background-position:0 0,83px 109px,21px 189px;
+  animation:dg-embers-float 33s linear infinite;
+  will-change:transform;
+}
+#cmd-dayz-motion-particles::after{
+  background:radial-gradient(ellipse at 24% 72%,rgba(231,65,48,.20),transparent 43%),radial-gradient(ellipse at 86% 42%,rgba(225,27,43,.13),transparent 39%);
+  opacity:.42;
+  animation:dg-light-sweep 19s ease-in-out infinite alternate;
+  will-change:transform,opacity;
+}
+@keyframes dg-embers-float{
+  from{transform:translate3d(-1%,6%,0) rotate(-1deg)}
+  to{transform:translate3d(2%,-12%,0) rotate(1deg)}
+}
+@keyframes dg-light-sweep{
+  from{transform:translate3d(-3%,2%,0) scale(1);opacity:.25}
+  to{transform:translate3d(2%,-3%,0) scale(1.04);opacity:.55}
+}
+/* Keep all actual UI above the decorative elements. */
+body > :is(.shell,.admin,.main),
+body > .top,
+body > .nav{
+  position:relative;
+  z-index:1;
+}
+body > :is(.gate-draft-header,.gate-guild-rail,.gate-side,.gate-shade,.gate-mobile-guild-strip){
+  /* Their existing higher navigation z-index values remain authoritative. */
+  isolation:isolate;
+}
+/* The animation is intentionally softer on mobile for battery + readability. */
+@media(max-width:800px){
+  body{background-attachment:scroll}
+  body::before{inset:-4% -8%!important;will-change:auto;animation-duration:45s!important}
+  body::after{opacity:.64;will-change:auto;animation-duration:37s!important}
+  #cmd-dayz-motion-particles::before{opacity:.25;animation-duration:48s;will-change:auto}
+  #cmd-dayz-motion-particles::after{opacity:.26;animation-duration:31s;will-change:auto}
+}
+@media(max-width:540px){
+  #cmd-dayz-motion-particles::before{opacity:.18}
+}
+@media(prefers-reduced-motion:reduce){
+  body::before,body::after,#cmd-dayz-motion-particles::before,#cmd-dayz-motion-particles::after{
+    animation:none!important;transition:none!important;will-change:auto!important;
+    transform:none!important;
+  }
+  #cmd-dayz-motion-particles::before{opacity:.15}
+  #cmd-dayz-motion-particles::after{opacity:.15}
+}
