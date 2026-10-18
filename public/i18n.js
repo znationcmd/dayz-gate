@@ -18,7 +18,19 @@ while(node=walker.nextNode()){const parent=node.parentElement;if(!parent||parent
 for(const element of document.querySelectorAll('[placeholder],[aria-label],[title]')){if(element.classList.contains('gate-language'))continue;let record=attributes.get(element)||{};for(const attr of ['placeholder','aria-label','title']){const current=element.getAttribute(attr);if(current===null)continue;if(!record[attr]||current!==record[attr].last)record[attr]={original:current};const next=t(record[attr].original);if(current!==next)element.setAttribute(attr,next);record[attr].last=next}attributes.set(element,record)}
 observer.observe(document.body,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['placeholder','aria-label','title']})}
 let queued=false;const observer=new MutationObserver(()=>{if(queued)return;queued=true;queueMicrotask(()=>{queued=false;apply()})});
-window.gateI18n={t,get language(){return language},languages};
+function fallbackLanguage(tag){
+ const base=String(tag||"fr").toLowerCase().split("-")[0];
+ const aliases={fra:"fr",eng:"en",deu:"de",ger:"de",gsw:"de",bar:"de",spa:"es",ita:"it",rus:"ru",cos:"co",jpn:"ja",kor:"ko",zho:"zh"};
+ const choice=aliases[base]||base;return languages[choice]?choice:"en";
+}
+window.addEventListener("cmd-world-language-change",event=>{
+ const selected=event.detail?.language;if(!selected)return;
+ const chosen=fallbackLanguage(selected);
+ if(language!==chosen){language=chosen;try{localStorage.setItem("dayz-gate-language",chosen)}catch{}apply();}
+ document.querySelectorAll("select.gate-language").forEach(select=>{if(select.value!==chosen)select.value=chosen});
+ document.documentElement.lang=selected;
+});
+window.gateI18n={t,get language(){return language},languages,fallbackLanguage};
 window.addEventListener('storage',event=>{if(event.key==='dayz-gate-language'){const value=languages[event.newValue]?event.newValue:'fr';if(value!==language){language=value;apply()}}});
 const style=document.createElement('style');style.textContent='.gate-language{width:145px!important;flex-shrink:0;background:#0c1119!important;color:#fff!important;border:1px solid #b7223b!important;border-radius:8px!important;padding:9px 7px!important;font-size:13px!important;margin:0!important;min-height:38px}.reference-top{gap:8px!important}header.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}header.top>.gate-language{margin-left:auto!important}header.top .brand{min-width:0;max-width:100%}.reference-search{min-width:0}dialog>.gate-language{margin:5px 0 10px!important}@media(max-width:800px){.reference-search{flex:1;width:0!important}.gate-language{width:125px!important;font-size:12px!important}}';document.head.appendChild(style);apply();
 })();
