@@ -87,7 +87,7 @@ input{min-height:42px;border:1px solid #604984;border-radius:10px;background:#20
  const counter=document.createElement("p");counter.className="counter";
  const alphabet=document.createElement("div");alphabet.className="alphabet";
  alphabet.setAttribute("role","group");alphabet.setAttribute("aria-label","Pays classés de A à Z");
- const letters=[..."ABCDEFGHIJKLMNOPQRSTUVWXYZ","#"];let letter="A",selectedCountry=null,viewMode="countries";
+ const letters=[..."ABCDEFGHIJKLMNOPQRSTUVWXYZ","#"];let letter="",selectedCountry=null,viewMode="world";
  function showLetters(){
   alphabet.replaceChildren();
   for(const key of letters){
@@ -155,6 +155,9 @@ input{min-height:42px;border:1px solid #604984;border-radius:10px;background:#20
    const legacyKeys=["cmdLang","cmdpad-language","cmdpad-ui-lang","dayz-gate-language","ark-language","cmd-browser-lang"];
    for(const key of legacyKeys){try{if(localStorage.getItem(key)!==null)localStorage.setItem(key,fb)}catch{}}
   }
+  try{localStorage.setItem("cmd-sphere-language",known?fb:safe)}catch{}
+  window.dispatchEvent(new CustomEvent("cmd-sphere-language-change",{detail:{language:known?fb:safe,selectedLanguage:safe}}));
+  window.dispatchEvent(new CustomEvent("cmd-language-change",{detail:{language:safe,fallback:fb}}));
   window.dispatchEvent(new CustomEvent("cmd-world-language-change",{detail:{language:safe,fallback:fb,mode}}));
   msg.textContent="✓ "+(label||safe)+" · "+safe+" · "+(mode==="auto"?"automatique":"manuel")+". "+(safe!==fb?"Interface existante : "+fb+" si disponible.":"");
   autoInfo.textContent=mode==="auto"?"Langue déduite de la langue et de la région de l'appareil, sans GPS.":"Choix personnel conservé jusqu'à changement.";
@@ -183,28 +186,52 @@ input{min-height:42px;border:1px solid #604984;border-radius:10px;background:#20
  }
  function renderWorld(){
   alphabet.hidden=true;results.classList.remove("country-index-actions");
-  results.replaceChildren();shown=0;matched=[];
+  results.replaceChildren();
   if(!status.languages){results.textContent="Chargement du catalogue…";return}
-  const queryText=query.value.trim().normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
-  if(!queryText&&letter){
-   for(const [code,name] of status.languages){
-    const first=name.normalize("NFD").replace(/[\u0300-\u036f]/g,"").charAt(0).toUpperCase();
-    if(letter==="#"?!/^[A-Z]$/.test(first):first===letter)matched.push([code,name]);
-   }
-  }else if(!queryText){
-   const byCode=new Map(status.languages),seen=new Set();
-   const priority=[existing(),"fr","en","de","es","it","co","gsw-CH","gsw-CH-x-bern","gsw-CH-x-zueri","gsw-CH-x-basel","gsw-CH-x-wallis","gsw-CH-x-luzern"];
-   for(const code of priority)if(byCode.has(code)&&!seen.has(code)){matched.push([code,byCode.get(code)]);seen.add(code)}
-   for(const entry of status.languages)if(!seen.has(entry[0])){matched.push(entry);seen.add(entry[0])}
-  }else{
-   for(const [code,name] of status.languages){
-    const full=(code+" "+name).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
-    if(full.includes(queryText))matched.push([code,name]);
-   }
+  const search=normalized(query.value.trim()),groups=new Map();
+  for(const [code,name] of status.languages){
+   if(search&&!normalized(code+" "+name).includes(search))continue;
+   const first=normalized(name).charAt(0).toUpperCase();
+   const initial=/^[A-Z]$/.test(first)?first:"#";
+   if(!groups.has(initial))groups.set(initial,[]);
+   groups.get(initial).push([code,name]);
   }
-  if(matched.length)nextPage();else{
-   counter.textContent="0 langue trouvée";
-   results.textContent="Aucune langue trouvée. Essaie un autre nom ou un code.";
+  const total=[...groups.values()].reduce((a,b)=>a+b.length,0);
+  counter.textContent=total+" langues et dialectes · ouvre la lettre A, B, C…";
+  if(!total){results.textContent="Aucun résultat : essaie une autre langue ou un code.";return}
+  const selected=existing();
+  for(const character of letters){
+   if(!groups.has(character))continue;
+   const rows=groups.get(character);
+   const folder=document.createElement("details");folder.className="country-folder";
+   folder.dataset.cmdLetter=character;
+   const head=document.createElement("summary");
+   head.textContent=(character==="#"?"Autres":character)+" · "+rows.length+" langues";
+   head.setAttribute("aria-label","Afficher toutes les langues en "+character);
+   const body=document.createElement("div");body.className="country-folder-content";
+   body.setAttribute("role","listbox");body.setAttribute("aria-label","Langues en "+character);
+   function fill(){
+    if(body.childElementCount)return;
+    const fragment=document.createDocumentFragment();
+    for(const [code,name] of rows){
+     const btn=document.createElement("button");btn.type="button";btn.className="choice";
+     btn.setAttribute("role","option");btn.setAttribute("aria-selected",String(code===selected));
+     btn.textContent=name+" · "+code;
+     btn.addEventListener("click",()=>{save(code,name);panel.hidden=true;trigger.setAttribute("aria-expanded","false")});
+     fragment.append(btn);
+    }
+    body.append(fragment);
+   }
+   folder.append(head,body);
+   folder.addEventListener("toggle",()=>{if(folder.open)fill()});
+   if(search&&rows.length<=35){folder.open=true;fill()}
+   results.append(folder);
+  }
+  if(!search){
+   const byCountry=document.createElement("button");byCountry.type="button";byCountry.className="more";
+   byCountry.textContent="🌍 Choisir par pays (facultatif)";
+   byCountry.addEventListener("click",()=>{viewMode="countries";showLetters();render()});
+   results.append(byCountry);
   }
  }
 
@@ -290,7 +317,7 @@ input{min-height:42px;border:1px solid #604984;border-radius:10px;background:#20
  query.addEventListener("input",()=>{
   letter="";selectedCountry=null;showLetters();
   const term=normalized(query.value.trim());
-  viewMode=term&&!countries.some(([code,name])=>normalized(code+" "+name).includes(term))?"world":"countries";
+  viewMode="world";
   render();
  });
  checkbox.addEventListener("change",()=>{if(checkbox.checked)save(detect(),"Langue de l'appareil","auto");else save(existing(),"Langue actuelle","manual")});
