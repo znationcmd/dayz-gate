@@ -423,7 +423,7 @@ function locale(code){
 }
 function selected(){try{return localStorage.getItem("cmd-world-language")||navigator.languages?.[0]||navigator.language||"fr"}catch{return"fr"}}
 let current=selected(),queued=false;
-const selector="header a,header button,header summary,nav a,nav button,nav summary,aside a,aside button,aside summary,.sidebar a,.sidebar button,.side-nav a,.side-nav button,.topbar a,.topbar button,.power-nav a,.power-nav button,.tabs button,.cmd-settings-layer button,[role='menuitem'],[role='tab'],h1,h2,h3";
+const selector="header a,header button,header summary,nav a,nav button,nav summary,aside a,aside button,aside summary,.sidebar a,.sidebar button,.side-nav a,.side-nav button,.topbar a,.topbar button,.power-nav a,.power-nav button,.tabs button,.cmd-settings-layer button,[role='menuitem'],[role='tab'],nav a span,nav button span,aside a span,aside button span,header a span,header button span,.sidebar a span,.sidebar button span,.topbar button span,.cmd-settings-layer button span,h1,h2,h3";
 function targetFor(source,lang){const row=aliases.get(source.trim());return row?(row[lang]||row.en||row.fr):null}
 function update(el,lang){
  if(el.closest("[contenteditable],[data-cmd-no-translate],.message-content,.chat-message,.message-text,.user-message,#messages,#chatMessages"))return;
