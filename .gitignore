@@ -1,0 +1,37 @@
+# CMD — fichiers locaux et sorties générées, non destinés à Git
+# Dépendances et compilations
+node_modules/
+dist/
+build/
+coverage/
+.next/
+.cache/
+.turbo/
+test-results/
+playwright-report/
+
+# Variables privées : conserver les exemples versionnés
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.key
+
+# Journaux et fichiers de travail
+*.log
+*.tmp
+*.swp
+*.swo
+*.bak
+*.orig
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Bases locales : ne jamais supprimer une base existante suivie par Git
+*.sqlite
+*.sqlite3
+*.db
