@@ -1,0 +1,27 @@
+name: CMD incremental bot source inventory (read-only)
+on:
+  pull_request:
+    paths:
+      - 'tools/cmd-update-plan.mjs'
+      - 'test/cmd-update-plan.test.mjs'
+      - '.github/workflows/cmd-update-inventory.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check tools/cmd-update-plan.mjs
+      - run: node --test test/cmd-update-plan.test.mjs
+      - run: node tools/cmd-update-plan.mjs --scope '.' --output cmd-update-inventory.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cmd-update-inventory
+          path: cmd-update-inventory.json
+          if-no-files-found: error
